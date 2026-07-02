@@ -1,0 +1,18 @@
+# 공문 DOCX 스타일 프로파일 (Loop 8.5)
+#
+# 프로젝트 로컬, 보수적인 공문 기본 서식 값이다.
+# 기관 공식 서식 표준을 그대로 재현했다고 보장하지 않으며, 참조 문서 기반 가이드일 뿐이다.
+# core/exporters/style_profile.py 의 DEFAULT_GONGMUN_STYLE_PROFILE 와 동일한 값을 문서화한다.
+# core.exporters.style_profile.load_from_toml() 로 읽을 수 있다(stdlib tomllib).
+
+[style]
+page_margin_top_mm = 30.0
+page_margin_bottom_mm = 20.0
+page_margin_left_mm = 20.0
+page_margin_right_mm = 20.0
+font_family = "Malgun Gothic"
+font_size_pt = 11.0
+heading_font_size_pt = 16.0
+line_spacing = 1.15
+paragraph_space_after_pt = 6.0
+heading_alignment = "center"

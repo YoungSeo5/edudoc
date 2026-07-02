@@ -1,0 +1,13 @@
+# edudoc Phase 0 설정
+# 민감정보(서버 IP/계정/비번)는 여기 넣지 말 것. .env 또는 비공개 시크릿으로 분리.
+
+[paths]
+watch_dir = "samples"     # 감시할 입력 폴더
+output_dir = "exports"    # md 출력 폴더
+
+[converters]
+# 기본 입력 변환기: hwp 스킬 (Python)
+default = "hwp_skill"
+
+# hwp2md(Rust) 크로스체크용 - 바이너리를 빌드했다면 경로 지정
+# hwp2md_bin = "/opt/hwp2md/target/release/hwp2md"
