@@ -16,6 +16,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from core.input_filter import is_processable_input
 from core.pipeline import Pipeline, PipelineConfig
 
 
@@ -84,7 +85,7 @@ def cmd_watch(folder: Path, pipeline: Pipeline) -> int:
     from connectors.folder_watcher import watch
 
     def on_file(path: Path) -> None:
-        if pipeline.registry.find(path):
+        if is_processable_input(path) and pipeline.registry.find(path):
             _print_result(pipeline.process_file(path))
 
     watch(folder, on_file)

@@ -87,11 +87,61 @@ def check_key_terms(text: str) -> list[Violation]:
     return v
 
 
+# --- 경기도교육청 공문서작성예시 기반 규칙 ------------------------------
+# 근거: references/gongmun/gyeonggi_office_format_example.pdf
+# (행정업무규정/행안부 편람). 오탐 여지가 있어 우선 warning 으로 둔다.
+
+_DATE_YMD_CHARS = re.compile(r"\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일")
+_DATE_NO_SPACE = re.compile(r"\d{4}\.\d{1,2}\.\d{1,2}")
+_DATE_LEADING_ZERO = re.compile(r"\.\s?0[1-9]\.")
+_TIME_AMPM = re.compile(r"(오전|오후)\s*\d{1,2}\s*시")
+_TIME_HANGUL = re.compile(r"\d{1,2}\s*시\s*\d{1,2}\s*분")
+
+
+def check_date_format(text: str) -> list[Violation]:
+    """날짜: 연·월·일 글자 생략, 온점+1타, 월·일 앞 '0' 제거 (예: 2024. 9. 6.)."""
+    v: list[Violation] = []
+    if _DATE_YMD_CHARS.search(text):
+        v.append(Violation("date_format",
+                           "날짜는 연·월·일 글자 대신 온점 표기 (예: 2024. 9. 6.)",
+                           severity="warning"))
+    if _DATE_NO_SPACE.search(text):
+        v.append(Violation("date_format",
+                           "날짜 온점 뒤 한 타 띄우기 (예: 2023.11.21 → 2023. 11. 21.)",
+                           severity="warning"))
+    if _DATE_LEADING_ZERO.search(text):
+        v.append(Violation("date_format",
+                           "날짜의 월·일 앞 '0'은 표기하지 않음 (예: 09. 06. → 9. 6.)",
+                           severity="warning"))
+    return v
+
+
+def check_time_format(text: str) -> list[Violation]:
+    """시각: 24시각제 쌍점 표기 (예: 오후 3시 20분 → 15:20)."""
+    if _TIME_AMPM.search(text) or _TIME_HANGUL.search(text):
+        return [Violation("time_format",
+                          "시각은 24시각제 쌍점 표기 (예: 15:20)",
+                          severity="warning")]
+    return []
+
+
+def check_amount_unit(text: str) -> list[Violation]:
+    """금액: '천 원' 단위 지양, 일반 숫자 표기 (예: 345천원 → 345,000원)."""
+    if re.search(r"\d+\s*천\s*원", text):
+        return [Violation("amount_unit",
+                          "금액은 '천 원' 단위 대신 일반 숫자 표기 (예: 345,000원)",
+                          severity="warning")]
+    return []
+
+
 DEFAULT_RULES = [
     check_end_mark,
     check_attachment_count,
     check_honorific,
     check_key_terms,
+    check_date_format,
+    check_time_format,
+    check_amount_unit,
 ]
 
 

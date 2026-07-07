@@ -74,7 +74,7 @@ class OfficeExporter(BaseExporter):
                     f"Unsupported output extension: {output_path.suffix} "
                     f"(supported: {sorted(self.supported_ext)})"
                 ),
-                meta={"exporter": self.name},
+                meta={"exporter": self.name, "requires_optional_tool": True},
             )
 
         if not markdown_path.exists():
@@ -83,7 +83,7 @@ class OfficeExporter(BaseExporter):
                 output=output_path,
                 ok=False,
                 error=f"Markdown source does not exist: {markdown_path}",
-                meta={"exporter": self.name},
+                meta={"exporter": self.name, "requires_optional_tool": True},
             )
 
         if not self._pandoc_available():
@@ -95,7 +95,11 @@ class OfficeExporter(BaseExporter):
                     "Pandoc executable was not found. "
                     "Place pandoc.exe under tools/pandoc/ or pass pandoc_path."
                 ),
-                meta={"exporter": self.name, "pandoc": self.pandoc_path},
+                meta={
+                    "exporter": self.name,
+                    "pandoc": self.pandoc_path,
+                    "requires_optional_tool": True,
+                },
             )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,6 +132,7 @@ class OfficeExporter(BaseExporter):
                 meta={
                     "exporter": self.name,
                     "pandoc": self.pandoc_path,
+                    "requires_optional_tool": True,
                     "stdout": completed.stdout,
                     "stderr": completed.stderr,
                 },
@@ -141,6 +146,7 @@ class OfficeExporter(BaseExporter):
                 meta={
                     "exporter": self.name,
                     "pandoc": self.pandoc_path,
+                    "requires_optional_tool": True,
                     "returncode": e.returncode,
                 },
             )
