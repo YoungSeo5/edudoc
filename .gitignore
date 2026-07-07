@@ -17,3 +17,7 @@ exports/*
 config/secrets.*
 tools/pandoc/pandoc.exe
 tools/typst/typst.exe
+
+# scratch/experiments (not part of the project)
+sandbox/
+generate.py

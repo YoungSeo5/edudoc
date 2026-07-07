@@ -1,91 +1,51 @@
 # edudoc
 
-edudoc is currently an **HWPX-first local document normalization and validation engine**.
+edudoc is a **document task automation system** focused on reference-based
+document generation.
 
-Phase 0.5 focuses on this flow:
+It is not primarily a file-format converter. The intended product flow is:
 
 ```text
-HWPX input
--> normalized Markdown and/or DocumentModel(JSON)
--> gongmun_rules validation
--> validation report output
+source/reference materials + user intent
+-> generated task document
+-> document-type validation
+-> final rendering to DOCX / HWPX / PDF / PPTX when needed
 ```
 
-The current development harness is CLI-first. API and web wrappers should wait until the CLI flow is stable.
+HWPX/HWP/Markdown normalization, validation reports, and exporters are supporting
+layers for that goal.
 
-## Current Direction
+## Current Reality
 
-Default MVP input:
-- HWPX
+- HWPX is the default structured input direction.
+- HWP remains a legacy/fallback compatibility path.
+- Markdown drafts can be validated and exported.
+- The small Gongmun generator can create a conservative Markdown draft from a
+  structured brief.
+- DOCX is the most mature final-rendering path, but still not layout-perfect.
+- PDF is fallback/experimental.
+- HWPX export is experimental.
 
-Supported compatibility input:
-- HWP legacy/fallback input
-- Markdown draft input
-
-Current user interface:
-- CLI
-- local folder watcher
-
-Future user interface:
-- API/web wrapper after CLI validation is stable
-
-Export formats such as DOCX, PDF, HWPX, and PPTX are useful, but they are not the core MVP gate. The core MVP gate is structure-preserving normalization plus validation report generation.
-
-## Core Workflow
+## Core Layers
 
 ```text
-source document
--> input converter
--> normalized Markdown / future DocumentModel(JSON)
--> validators/gongmun_rules.py
--> exports/*.validation.txt
-```
-
-When a converter provides structured data, the pipeline also writes:
-
-```text
-exports/<stem>.document.json
-```
-
-Optional explicit export:
-
-```text
-normalized Markdown
+source documents
+-> source bundle / filtering
+-> document understanding
+-> generation request
+-> document planner
+-> generator
+-> validator
+-> template/layout renderer
 -> exporter
--> DOCX / PDF / HWPX / PPTX
 ```
 
-## Project Structure
+See:
 
-```text
-edudoc/
-├── main.py
-├── requirements.txt
-├── AGENTS.md
-├── CLAUDE.md
-├── MEMORY.md
-├── core/
-│   ├── converter_base.py
-│   ├── hwp_converter.py          # HWPX primary input, HWP legacy fallback
-│   ├── markdown_converter.py     # Markdown draft passthrough
-│   ├── registry.py
-│   ├── pipeline.py
-│   └── exporters/                # optional output adapters
-├── validators/
-│   └── gongmun_rules.py
-├── connectors/
-│   └── folder_watcher.py
-├── docs/
-│   ├── HARNESS.md
-│   ├── SUCCESS_CRITERIA.md
-│   ├── format-rules.md
-│   ├── license-notes.md
-│   └── test-plan.md
-├── samples/
-├── exports/
-├── tasks/
-└── tests/
-```
+- `docs/product-direction.md`
+- `docs/workflows.md`
+- `docs/export-status.md`
+- `docs/export-quality-criteria.md`
 
 ## Run
 
@@ -103,7 +63,9 @@ Optional export path:
 python main.py run samples/ --export docx,pdf
 ```
 
-The default workflow must not require LibreOffice, MS Office, HWP installation, LaTeX, Pandoc, or Typst. Heavy binaries may remain optional fallback/comparison tools only.
+The default workflow must not require LibreOffice, MS Office, HWP installation,
+LaTeX, Pandoc, or Typst. Heavy binaries may remain optional fallback/comparison
+tools only.
 
 ## Development Harness
 
@@ -114,18 +76,13 @@ Read these first:
 - `MEMORY.md`
 - `CLAUDE.md`
 
-The important rule is:
+Important direction:
 
 ```text
-HWPX is the default MVP input.
+HWPX is the default structured input direction.
 HWP is legacy/fallback compatibility input.
+Export is the final rendering step, not the product goal.
 ```
 
-Future work should not infer that binary HWP is the default product direction merely because the repository contains HWP fallback code.
-
-## Notes
-
-- Do not vendor third-party tool source code into this repository.
-- Keep setup lightweight: `pip install -r requirements.txt` should be enough for the default workflow.
-- Generated outputs and cache files should not become part of the source tree.
-- Validation rules should be improved, not weakened, to make tests pass.
+Future work should not infer that binary HWP or any single export format is the
+default product direction.

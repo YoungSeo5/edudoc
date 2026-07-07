@@ -23,7 +23,7 @@ DOCX is the first output priority.
 
 Rules:
 - generate from Markdown
-- prefer Pandoc output
+- prefer the pip-native `DocxExporter`
 - use reference DOCX templates when layout consistency matters
 - do not add DOCX export behavior to input converters
 
@@ -33,19 +33,21 @@ PDF is the second output priority.
 
 Rules:
 - generate from Markdown after validation
-- prefer Pandoc output for the MVP
+- PDF currently uses the `OfficeExporter` fallback unless a dedicated pip-native PDF exporter is added
+- do not report fallback PDF as stabilized
 - treat PDF layout validation as a separate output check
 
 ## HWPX
 
-HWPX is the default MVP input and a future output target.
+HWPX is the default MVP input and now has an experimental minimal output target.
 
 Rules:
 - prioritize HWPX structure preservation for new parsing and validation work
 - preserve structure in metadata or future DocumentModel(JSON)-compatible fields when possible
 - keep HWPX export in a dedicated exporter
 - do not mix HWPX output with HWP/HWPX input conversion
-- apply namespace cleanup and validation when a stable exporter is added
+- run package-level validation for generated HWPX
+- do not claim stable/layout-compliant HWPX export until stronger tests prove it
 
 ## PPTX
 

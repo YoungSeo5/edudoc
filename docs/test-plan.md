@@ -1,10 +1,89 @@
 # Test Plan
 
-This test plan follows the current HWPX-first MVP:
+This test plan follows the current HWPX-first foundation, but the product
+direction is document task automation:
+
+```text
+source/reference materials + user intent
+-> generated task document
+-> document-type validation
+-> final rendering
+```
+
+The existing HWPX flow remains a foundation:
 
 HWPX input -> DocumentModel(JSON)/Markdown -> gongmun_rules validation -> validation report.
 
 Binary `.hwp` remains a legacy/fallback compatibility path. It is not the default MVP input for new harness checks.
+
+Export tests verify final-rendering channels. They do not by themselves prove the
+full product workflow unless source-bundle, request-planning, generation, and
+document-type validation are also covered.
+
+## SourceBundle Intake Check
+
+Run:
+
+```bash
+python tests/test_source_bundle.py
+```
+
+Expected:
+- real source-like Markdown/HWP/HWPX files are included in the manifest
+- repository/control files such as `README.md`, `README.txt`, `AGENTS.md`,
+  `AGENT.md`, `CLAUDE.md`, and `.gitkeep` are ignored
+- generated artifacts such as validation reports, document JSON, DOCX, PDF,
+  PPTX, and generated HWPX companions are ignored with clear reasons
+- unsupported source candidates are recorded separately
+- bundle creation writes no outputs into the input directory
+- the bundle is JSON-serializable
+- no conversion, generation, validation, or export is performed
+
+## Target Document Profile Check
+
+Run:
+
+```bash
+python tests/test_target_document_profiles.py
+python tests/test_source_profile_document_plan.py
+python tests/test_public_plan_generator.py
+python tests/test_public_plan_cli.py
+```
+
+Expected:
+- three target profiles exist: `standard_gongmun`,
+  `government_press_release`, and `public_institution_plan`
+- profiles are edudoc-owned metadata extracted from protected
+  `skills/hwp-skill/` references
+- referenced protected skill files exist, but are not modified or copied into
+  `core/`
+- canonical generation output remains Markdown or DocumentModel
+- HWPX skill scripts are recorded only as optional final-renderer references
+- missing facts must be marked as `확인 필요`
+- `SourceProfile` extracts deterministic source facts from Markdown/
+  DocumentModel input: titles, institutions, dates, tables, statistics, budgets,
+  schedules, key actions, risks, and attachments
+- `DocumentPlan` maps `SourceProfile` facts into the `public_institution_plan`
+  scaffold and preserves missing values as `확인 필요`
+- `public_plan_generator` renders the DocumentPlan into a conservative
+  public-institution plan Markdown draft
+- `scripts/public_plan/generate_from_samples.py` connects sample inputs to
+  SourceProfile, DocumentPlan, public-plan Markdown, and optional DOCX export
+- PDF files in `references/document-types/*/samples/` are tracked as reference
+  samples but are not parsed by this layer
+
+Manual public-plan CLI check:
+
+```bash
+python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan
+python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan --export docx
+```
+
+Expected:
+- `public_plan.source_profile.json`
+- `public_plan.document_plan.json`
+- `public_plan.generated.md`
+- `public_plan.docx` when `--export docx` is used
 
 ## Basic Pipeline Check
 
@@ -40,6 +119,8 @@ Expected:
 - Markdown is copied or normalized into `exports/`
 - validation report is created as `*.validation.txt`
 - DOCX/PDF export is not attempted unless explicitly requested
+- `samples/README.md`, `samples/AGENTS.md`, `samples/AGENT.md`, `CLAUDE.md`, `.gitkeep`, validation reports, document JSON, and generated Office outputs are skipped during directory runs
+- generated outputs are written to `exports/` or the configured output directory, not back into `samples/`
 
 ## Gongmun Writer Skill Check
 
@@ -133,8 +214,30 @@ python main.py watch samples/ --export docx,pdf
 Use the `.hwp` sample to prevent regressions in compatibility support.
 
 Expected for now:
-- `.hwp` -> Markdown compatibility path remains available when dependencies are installed
+- `.hwp` first tries the safe edudoc-owned hwpx-skill adapter path when an
+  already installed or explicitly local `hwp2hwpx` engine is available
+- the adapter does not auto-install packages, clone repositories, or modify
+  protected `skills/` files
+- if the adapter is unavailable or the intermediate HWPX read fails, the
+  existing pyhwp -> HTML -> markdownify fallback remains available when its
+  dependencies are installed
+- HWP input does not imply HWPX final output; final rendering is still selected
+  later by the user/export pipeline
 - no new architecture or tests should treat HWP as the default MVP input
+
+Focused adapter smoke test:
+
+```bash
+python tests/test_hwpx_skill_adapter.py
+```
+
+Expected:
+- a local fake `hwp2hwpx` engine can be called without install/clone behavior
+- a missing engine returns a clear structured adapter error
+- `HwpSkillConverter` keeps the pyhwp fallback path when the adapter is
+  unavailable
+- `HwpSkillConverter` prefers the HWP -> HWPX -> Markdown path when the adapter
+  succeeds
 
 ## Output Checks
 
@@ -143,6 +246,7 @@ Loop 8 focused DOCX smoke test:
 ```bash
 python tests/test_gongmun_docx_export.py
 python tests/test_pipeline_docx_export.py
+python tests/test_gongmun_export_docx_stable.py
 ```
 
 Expected:
@@ -152,6 +256,8 @@ Expected:
 - DOCX output exists and has nonzero size
 - visible DOCX text includes the title, `수신`, `관련`, `붙임`, and `끝.`
 - pipeline-level `.docx` export uses `DocxExporter`, not Pandoc-backed `OfficeExporter`
+- export metadata includes `format`, `ok`, `path`, `exporter`, `stabilized`,
+  `experimental`, `requires_optional_tool`, `status`, `note`, and `error`
 
 Loop 8.5 DOCX style profile test:
 
@@ -188,6 +294,9 @@ Expected:
 
 ```bash
 python tests/test_docx_realistic_structure_export.py
+python tests/test_sample_input_filtering.py
+python tests/test_docx_table_quality.py
+python tests/test_docx_wide_table_metadata.py
 python tests/test_pdf_export_status.py
 ```
 
@@ -195,6 +304,10 @@ python tests/test_pdf_export_status.py
   (`test_gongmun_docx_export.py`, `test_pipeline_docx_export.py`, `test_docx_exporter.py`).
 - Structure (level 3): realistic wide-table document — table count, wide-table columns,
   long-cell text, headings, style profile (`test_docx_realistic_structure_export.py`).
+- Form/table baseline: sample control-file filtering and sanitized form fixtures lock
+  DOCX table count, wide-table detection, compact landscape strategy, and table metadata
+  (`test_sample_input_filtering.py`, `test_docx_table_quality.py`,
+  `test_docx_wide_table_metadata.py`).
 - Fallback status: PDF is flagged fallback/experimental, not stable
   (`test_pdf_export_status.py`, `test_real_sample_export_status.py`).
 - Manual visual check: layout-aware rendering (level 4) is not auto-tested; review the
@@ -208,7 +321,29 @@ For DOCX/PDF output:
 - visible text roughly matches the Markdown source
 - headings and lists remain readable
 
-For HWPX output, when added:
-- generated package opens in a supported editor
-- namespace cleanup has run
-- HWPX validation passes
+For HWPX output:
+- generated package exists and is a valid ZIP package
+- required package files are present
+- mimetype ordering/storage/content is valid
+- XML files are well-formed
+- preview text preserves key Gongmun text
+- editor opening/layout compliance is not claimed by automated tests yet
+
+Loop 8 protected skill adapter/export status tests:
+
+```bash
+python tests/test_gongmun_export_docx_stable.py
+python tests/test_gongmun_export_pdf_status.py
+python tests/test_gongmun_export_hwpx.py
+python tests/test_export_metadata_contract.py
+python tests/test_protected_skills_not_modified.py
+```
+
+Expected:
+- tests use `tests/fixtures/gongmun/valid_gongmun.md`, not mutable `samples/`
+- DOCX export is pip-native and partially stabilized
+- PDF export remains fallback/experimental or structured failure; it is not stable
+- HWPX export creates a minimal package through `core/exporters/hwpx_exporter.py`
+- HWPX package-level validation runs through `validators/hwpx_package_rules.py`
+- HWPX export is marked experimental, not layout-perfect or institution-approved
+- protected skill directories under `skills/` are not modified and are not used for hidden setup

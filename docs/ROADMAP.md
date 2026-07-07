@@ -18,7 +18,7 @@ Loop 5.5 = Connect Gongmun Writer example to gongmun_rules validation
 Loop 6   = Summarize Gongmun reference PDF as Skill source note
 Loop 7   = brief -> Gongmun Markdown -> validation report flow
 Loop 8   = validated Markdown -> DOCX/HWPX/PDF export stabilization
-Loop 8.5 = Gongmun reference style profile / DOCX style profile integration (inserted Loop 8 sub-loop)
+Loop 8.5 = Gongmun reference style profile / DOCX style profile integration
 Loop 9   = pre-commit/CI-based harness automation
 Loop 10  = API/Web wrapper after CLI stabilization
 ```
@@ -55,39 +55,50 @@ Loop 6 was then backfilled through:
 
 Now that both Loop 6 and Loop 7 are complete, the current canonical loop is Loop 8.
 
+Loop 8.5 is an inserted Loop 8 sub-loop and is complete. It does not replace
+Loop 9 or Loop 10.
+
 ## Numbering Policy
 
 - Do not rename loops because work happened in a different order.
 - Do not treat the most recently implemented feature as the next canonical loop.
 - If a later loop is implemented early, mark it as implemented early.
-- If a lower-numbered loop remains pending, backfill it before moving to the next canonical loop unless the user explicitly approves skipping it.
-- When proposing the next loop, choose the lowest-numbered pending canonical loop by default.
+- If a lower-numbered loop remains pending, backfill it before moving to the next
+  canonical loop unless the user explicitly approves skipping it.
+- When proposing the next loop, choose the lowest-numbered pending canonical loop
+  by default.
 
 ## Current Canonical Loop
 
 ```text
-Loop 8 — validated Markdown -> DOCX/HWPX/PDF export stabilization
+Loop 8 - validated Markdown -> DOCX/HWPX/PDF export stabilization
 ```
 
-Validation-rule expansion and folder workflow integration are valid future tasks, but they are not the next canonical loop unless explicitly inserted by the user.
+Validation-rule expansion and folder workflow integration are valid future tasks,
+but they are not the next canonical loop unless explicitly inserted by the user.
 
-Loop 8.5 (Gongmun DOCX style profile integration) is an inserted Loop 8 sub-loop and is complete. It does not replace Loop 9 or Loop 10.
+## Product Direction
 
-## Product Direction (goal beyond format conversion)
+edudoc is a document task automation system, not a file-format conversion tool.
+The product goal is reference-based document generation:
 
-edudoc is not only a file-format converter. The product goal is **reference-based
-document generation**: learn reusable writing rules, structure patterns, and style
-profiles from reference documents, then generate new documents (공문, 활동보고서,
-신청서/사업계획서, 홍보용 자료, 안내문, 발표/배포용 문서) and export them.
+```text
+source/reference materials + user intent
+-> generated task document
+-> document-type validation
+-> final rendering
+```
 
-See `docs/product-direction.md` for the four workflows (normalization / reference
-capture / generation / export) and folder responsibilities.
+Target document tasks include 공문, 공식 보고서, 활동보고서, 신청서/사업계획서,
+홍보 안내문, 카드뉴스 문구, 발표자료 초안, and 영상 스크립트/스토리보드.
 
-Implications for loop planning:
+See `docs/product-direction.md` and `docs/workflows.md` for the product workflow.
 
-- Loop 8 remains export stabilization; the immediate work is **export reality alignment**
-  (honest status + real-sample regression), not API/web/folder workflow.
+## Planning Implications
+
+- Loop 8 remains export stabilization, but export is a final rendering layer, not
+  the whole product.
 - Export must not be treated as complete until real-sample regression coverage exists.
 - PDF/HWPX/PPTX are not stable just because they are listed as desired outputs.
-- Reference-based generation (including promotional materials) is a future product
-  direction, not an implemented feature, and does not renumber the canonical loops.
+- Document task automation requires future source-bundle, document-understanding,
+  request-planning, generation, document-type validation, and rendering/export work.

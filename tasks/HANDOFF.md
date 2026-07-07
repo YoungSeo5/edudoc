@@ -2,10 +2,180 @@
 
 ## Current Goal
 
-Loop 8.5 — apply a reusable Gongmun style profile to pip-native DOCX export.
-(The previous Loop 8 step — routing pipeline `.docx` to `DocxExporter` — is complete and verified.)
+Product direction reset is complete for the first documentation pass.
+
+edudoc should be treated as a document task automation system:
+
+```text
+source/reference materials + user intent
+-> generated task document
+-> document-type validation
+-> final rendering
+```
+
+It should not be treated as a simple file-format conversion tool.
+
+Loop 8 sample filtering and DOCX form/table quality slice is complete.
+
+Current status:
+- SourceBundle intake foundation now exists: it builds a filtered source manifest
+  and writes no outputs.
+- Documentation now separates the product goal from exporter mechanics.
+- Export remains the final rendering step, not the product goal.
+- DOCX export remains the partially stabilized pip-native path.
+- DOCX form/table quality is the current priority before PDF rendering work.
+- Directory runs skip repository/control files and generated artifacts in `samples/`.
+- Wide/form tables now use compact landscape DOCX handling and expose table quality metadata.
+- PDF export remains fallback/experimental through `OfficeExporter`.
+- HWPX now has an edudoc-owned minimal exporter in `core/exporters/hwpx_exporter.py`, marked experimental.
+- Package-level HWPX validation lives in `validators/hwpx_package_rules.py`.
+- HWP intake now has an edudoc-owned adapter in
+  `core/adapters/hwpx_skill_adapter.py` that wraps the protected
+  `skills/hwpx-skill-main` HWP -> HWPX flow without editing the skill or doing
+  hidden install/clone setup.
+- `.hwp` intake prefers HWP -> temporary HWPX -> Markdown/DocumentModel when an
+  installed or explicitly local `hwp2hwpx` engine is available. If not, the
+  existing pyhwp fallback remains. HWP input does not imply HWPX final output.
+- TargetDocumentProfile extraction now exists in
+  `core/target_document_profiles.py` for `standard_gongmun`,
+  `government_press_release`, and `public_institution_plan`. These profiles
+  extract protected `skills/hwpx-skill-main` document-type knowledge into
+  edudoc-owned metadata. They do not execute protected scripts, generate final
+  documents, or change exporter behavior.
+- SourceProfile/DocumentPlan scaffold now exists. `core/source_profile.py`
+  extracts deterministic source facts from Markdown/DocumentModel input, and
+  `core/document_plan.py` maps them into the `public_institution_plan` planning
+  scaffold. Reference PDFs are tracked as reference samples but not parsed.
+  This is not yet a final report generator.
+- Public-plan Markdown generation now exists in
+  `core/generators/public_plan_generator.py`. It renders a
+  `public_institution_plan` DocumentPlan into a conservative Markdown draft. It
+  does not call an LLM, parse PDFs, export final files, or modify protected
+  skills.
+- Public-plan CLI connection now exists in
+  `scripts/public_plan/generate_from_samples.py`. It reads source samples,
+  builds SourceProfile and DocumentPlan JSON, writes a generated Markdown draft,
+  and can optionally export DOCX through `DocxExporter`.
+- Protected skill files under `skills/hwp/`, `skills/hwp-skill/`,
+  `skills/rhwp-edit/`, `skills/rhwp-advanced/`, and
+  `skills/hwpx-skill-main/` remain reference-only and were not modified.
 
 ## Files Changed
+
+Product direction reset:
+- `core/source_bundle.py`
+- `tests/test_source_bundle.py`
+- `core/input_filter.py`
+- `docs/product-direction.md`
+- `docs/workflows.md`
+- `AGENTS.md`
+- `README.md`
+- `samples/AGENTS.md`
+- `samples/README.md`
+- `docs/export-status.md`
+- `docs/export-quality-criteria.md`
+- `docs/test-plan.md`
+- `docs/ROADMAP.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+SourceBundle intake foundation:
+- `core/source_bundle.py` (new)
+- `core/input_filter.py` (adds skip reasons while preserving `is_processable_input`)
+- `tests/test_source_bundle.py` (new)
+- `docs/workflows.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 sample filtering / DOCX table quality slice:
+- `core/input_filter.py` (new)
+- `main.py` (watch filtering)
+- `core/pipeline.py` (directory filtering + DOCX table metadata in export entries)
+- `core/exporters/docx_exporter.py` (wide-table strategy + metadata)
+- `tests/fixtures/export/wide_activity_report.md` (new)
+- `tests/fixtures/export/business_plan_form.md` (new)
+- `tests/test_sample_input_filtering.py` (new)
+- `tests/test_docx_table_quality.py` (new)
+- `tests/test_docx_wide_table_metadata.py` (new)
+- `docs/export-status.md`
+- `docs/export-quality-criteria.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 protected skill adapter/export stabilization slice:
+- `core/exporters/hwpx_exporter.py` (new)
+- `validators/hwpx_package_rules.py` (new)
+- `core/pipeline.py` (HWPX exporter route + metadata contract)
+- `core/exporters/__init__.py`
+- `core/exporters/docx_exporter.py` (metadata)
+- `core/exporters/office_exporter.py` (metadata)
+- `tests/fixtures/gongmun/valid_gongmun.md` (new)
+- `tests/test_gongmun_export_docx_stable.py` (new)
+- `tests/test_gongmun_export_pdf_status.py` (new)
+- `tests/test_gongmun_export_hwpx.py` (new)
+- `tests/test_export_metadata_contract.py` (new)
+- `tests/test_protected_skills_not_modified.py` (new)
+- `docs/folder-responsibility.md` (new)
+- `docs/export-status.md`
+- `docs/export-quality-criteria.md`
+- `docs/format-rules.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 safe HWP intake adapter slice:
+- `core/adapters/__init__.py` (new)
+- `core/adapters/hwpx_skill_adapter.py` (new)
+- `core/hwp_converter.py` (prefers safe HWP -> HWPX normalization before pyhwp fallback)
+- `tests/test_hwpx_skill_adapter.py` (new)
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 TargetDocumentProfile extraction slice:
+- `core/target_document_profiles.py` (new)
+- `tests/test_target_document_profiles.py` (new)
+- `docs/target-document-profiles.md` (new)
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 SourceProfile/DocumentPlan scaffold slice:
+- `core/source_profile.py` (new)
+- `core/document_plan.py` (new)
+- `tests/test_source_profile_document_plan.py` (new)
+- `docs/target-document-profiles.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 public-plan Markdown generator slice:
+- `core/generators/public_plan_generator.py` (new)
+- `core/generators/__init__.py`
+- `tests/test_public_plan_generator.py` (new)
+- `docs/target-document-profiles.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
+
+Loop 8 public-plan CLI connection slice:
+- `scripts/public_plan/generate_from_samples.py` (new)
+- `tests/test_public_plan_cli.py` (new)
+- `docs/target-document-profiles.md`
+- `docs/test-plan.md`
+- `tasks/current_task.md`
+- `tasks/HANDOFF.md`
+- `MEMORY.md`
 
 Loop 8.5 (style profile):
 - `core/exporters/style_profile.py` (new)
@@ -22,6 +192,29 @@ Loop 8.5 (style profile):
 Previous Loop 8 step (DOCX routing, already complete):
 - `core/pipeline.py`
 - `tests/test_pipeline_docx_export.py`
+
+## Latest Verification
+
+`python -m pytest tests` was attempted, but pytest is not installed in this environment.
+Focused tests were run individually instead.
+
+Latest passing commands:
+- `python tests/test_sample_input_filtering.py`
+- `python tests/test_docx_table_quality.py`
+- `python tests/test_docx_wide_table_metadata.py`
+- `python tests/test_pipeline.py`
+- `python tests/test_gongmun_docx_export.py`
+- `python tests/test_pipeline_docx_export.py`
+- `python tests/test_style_profile.py`
+- `python tests/test_docx_realistic_structure_export.py`
+- `python tests/test_pdf_export_status.py`
+- `python tests/test_export_metadata_contract.py`
+- `python tests/test_gongmun_export_docx_stable.py`
+- `python scripts/harness/check_dependency_policy.py`
+- `python scripts/harness/check_hwp_priority_drift.py`
+
+Result: all focused commands passed. Python commands required elevated execution
+because the default sandbox hit the known Windows logon-session error.
 
 ## Style Profile Added
 
@@ -80,11 +273,16 @@ Result: all 12 passed in this environment.
 
 ## Next Recommended Loop 8 Step
 
-Continue within Loop 8 by choosing one narrow slice:
+Continue by choosing one narrow product-direction slice:
 
-- narrow pip-native PDF exporter slice (`reportlab`) reusing the style profile
-- narrow HWPX exporter feasibility/smoke slice (`python-hwpx`) reusing the style profile
-- optional DOCX template-file support if the user provides an actual DOCX/HWPX template
+- public-plan validation rules for generated Markdown
+- user request planner
+- official report generator
+- document-type validators
+- template/render/export after generation
+
+Exporter work such as PDF/HWPX/DOCX stabilization remains valid, but it should be
+framed as final rendering after generation and validation, not as the whole product.
 
 Do not recommend validation-rule expansion or folder workflow integration as the next canonical loop unless the user explicitly inserts an extra loop.
 
@@ -329,3 +527,4 @@ Previous tests checked file creation and basic text preservation, not usable doc
 ### Next Recommended Step
 
 One narrow next Loop 8 step: dedicated pip-native PDF exporter (reportlab) with real-sample regression; or DOCX template support; or HWPX exporter feasibility; or reference/template ingestion planning for generation. Do not start API/web/folder workflow or a full generator prematurely.
+
