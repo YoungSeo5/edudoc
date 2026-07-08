@@ -1,5 +1,19 @@
 # MEMORY.md
 
+### 2026-07-07 - Public-plan DocumentPlan to hwp-skill HWPX bridge added
+
+- Added `core/renderers/hwp_skill_renderer.py` as an edudoc-owned adapter that
+  renders `public_institution_plan` DocumentPlan outputs through the protected
+  `skills/hwp-skill/scripts/gyehoek.py` script.
+- `scripts/public_plan/generate_from_samples.py --export hwpx` now writes
+  `public_plan.hwpskill.input.json`, `public_plan.hwpx`, and
+  `public_plan.export.hwpx.json`.
+- Protected skill files remain unmodified. The adapter calls the skill script
+  as a subprocess and validates the generated HWPX with the skill's
+  `validate.py`.
+- This connects the public-plan sample flow to a real HWPX final rendering path;
+  standard Gongmun and press-release hwp-skill renderers remain future adapters.
+
 ### 2026-07-06 — compose Phase 1: HWPX render adapter (hwp-skill) connected
 
 - Verified hwp-skill runs in this env: `gonmun.py --sample` and `md2hwpx.py` produce VALID HWPX; deps are pip-native (`python-hwpx`, `lxml`), no pyhwp5/olefile needed for rendering.
@@ -314,4 +328,3 @@ edudoc 프로젝트의 중요한 결정 기록. (CLAUDE.md의 '기억과 연속�
 - 주의: 이 저장소는 다중 에이전트 동시 작업 중(같은 날 오후 출력단/pandoc은 다른 에이전트가 구현).
   `hwp_converter.py` 입력 로직은 이 세션 산출물 — 되돌리기 전 확인 필요.
 - 설치: `pyhwp`, `markdownify` (requirements.txt 반영).
-

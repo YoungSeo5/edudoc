@@ -68,7 +68,9 @@ Expected:
 - `public_plan_generator` renders the DocumentPlan into a conservative
   public-institution plan Markdown draft
 - `scripts/public_plan/generate_from_samples.py` connects sample inputs to
-  SourceProfile, DocumentPlan, public-plan Markdown, and optional DOCX export
+  SourceProfile, DocumentPlan, public-plan Markdown, optional DOCX export, and
+  optional public-plan HWPX rendering through the protected hwp-skill
+  `gyehoek.py` adapter
 - PDF files in `references/document-types/*/samples/` are tracked as reference
   samples but are not parsed by this layer
 
@@ -77,6 +79,7 @@ Manual public-plan CLI check:
 ```bash
 python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan
 python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan --export docx
+python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan --export hwpx
 ```
 
 Expected:
@@ -84,6 +87,8 @@ Expected:
 - `public_plan.document_plan.json`
 - `public_plan.generated.md`
 - `public_plan.docx` when `--export docx` is used
+- `public_plan.hwpskill.input.json`, `public_plan.hwpx`, and
+  `public_plan.export.hwpx.json` when `--export hwpx` is used
 
 ## Basic Pipeline Check
 

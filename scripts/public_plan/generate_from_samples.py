@@ -14,6 +14,7 @@ from core.document_model import document_model_from_markdown  # noqa: E402
 from core.document_plan import create_document_plan  # noqa: E402
 from core.exporters.docx_exporter import DocxExporter  # noqa: E402
 from core.generators.public_plan_generator import generate_public_plan_markdown  # noqa: E402
+from core.renderers.hwp_skill_renderer import HwpSkillRenderer  # noqa: E402
 from core.registry import default_registry  # noqa: E402
 from core.source_bundle import build_source_bundle  # noqa: E402
 from core.source_profile import build_source_profile_from_document_models  # noqa: E402
@@ -49,10 +50,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--export",
-        choices=("docx",),
+        choices=("docx", "hwpx"),
         action="append",
         default=[],
-        help="Optional final export format. Currently supports docx.",
+        help="Optional final export format. Supports docx and public-plan hwpx.",
     )
     args = parser.parse_args(argv)
 
@@ -136,6 +137,26 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: DOCX export failed: {export_result.error}", file=sys.stderr)
             return 1
         export_paths.append(docx_path)
+
+    if "hwpx" in args.export:
+        hwpx_path = out_dir / "public_plan.hwpx"
+        render_result = HwpSkillRenderer(repo_root=ROOT).render_public_plan(
+            plan,
+            hwpx_path,
+            contract_path=out_dir / "public_plan.hwpskill.input.json",
+            include_title_page=True,
+            include_table_of_contents=True,
+        )
+        _write_json(out_dir / "public_plan.export.hwpx.json", {
+            "ok": render_result.ok,
+            "error": render_result.error,
+            "meta": render_result.meta,
+            "output": str(render_result.output),
+        })
+        if not render_result.ok:
+            print(f"ERROR: HWPX render failed: {render_result.error}", file=sys.stderr)
+            return 1
+        export_paths.append(hwpx_path)
 
     print(f"source_profile: {source_profile_path}")
     print(f"document_plan: {plan_path}")

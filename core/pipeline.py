@@ -15,6 +15,7 @@ from pathlib import Path
 from .converter_base import ConvertResult
 from .exporters import HwpxExporter, OfficeExporter
 from .exporters.docx_exporter import DocxExporter
+from .exporters.pptx_exporter import PptxExporter
 from .input_filter import is_processable_input
 from .registry import ConverterRegistry, default_registry
 from validators.document_model_rules import validate as validate_document_model
@@ -179,6 +180,19 @@ class Pipeline:
                 ),
             }
 
+        if exporter_name == "PptxExporter":
+            return {
+                "status": "partially_stabilized" if export_result.ok else "failed",
+                "stabilized": export_result.ok,
+                "experimental": False,
+                "requires_optional_tool": False,
+                "note": export_result.meta.get(
+                    "note",
+                    "pip-native PPTX export; text/bullets/tables are tested, "
+                    "but slide visual design is not claimed",
+                ),
+            }
+
         if exporter_name == "HwpxExporter":
             return {
                 "status": "experimental" if export_result.ok else "failed",
@@ -216,6 +230,8 @@ class Pipeline:
     def _select_exporter(self, ext: str):
         if ext.lower() == ".docx":
             return DocxExporter()
+        if ext.lower() == ".pptx":
+            return PptxExporter()
         if ext.lower() == ".hwpx":
             return HwpxExporter()
         return OfficeExporter()

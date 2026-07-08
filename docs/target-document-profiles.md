@@ -211,6 +211,7 @@ The command path is now available:
 ```bash
 python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan
 python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan --export docx
+python scripts/public_plan/generate_from_samples.py samples --out exports/public-plan --export hwpx
 ```
 
 It writes:
@@ -219,6 +220,13 @@ It writes:
 - `public_plan.document_plan.json`
 - `public_plan.generated.md`
 - `public_plan.docx` when `--export docx` is used
+- `public_plan.hwpskill.input.json`, `public_plan.hwpx`, and
+  `public_plan.export.hwpx.json` when `--export hwpx` is used
+
+The `--export hwpx` path uses an edudoc-owned adapter around the protected
+`skills/hwp-skill/scripts/gyehoek.py` renderer. It passes explicit title-page
+and table-of-contents decisions and validates the generated HWPX package with
+the skill's `validate.py`. It does not modify protected skill files.
 
 This is what will let edudoc answer requests like:
 
