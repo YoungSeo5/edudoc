@@ -67,6 +67,34 @@ Do not mix these responsibilities.
 - Validators do not generate or export documents.
 - Exporters do not invent missing content or perform AI reasoning.
 - Export is the final rendering step after generation and validation.
+- Templates and style profiles are reusable assets, not a layer: generators fill
+  a template's blocks with content; exporters apply its style profile.
+
+## Template-first Generation
+
+edudoc generates on demand from a user request, not by bulk-templating every
+reference file. The flow:
+
+1. User request — e.g. "read these repo/source files and produce a report", or
+   "make a document in the shape of this example".
+2. Look up whether a template for that institution × document type already exists
+   under `skills/templates/`.
+3. If it exists: the agent fills each template block with content drawn from the
+   source materials.
+4. If it does not exist: extract a template candidate from the user-provided
+   example, then fill it.
+5. If no example was provided and none exists: ask the user for an example or
+   form before generating.
+
+Template honesty rules:
+
+- Deterministic code (`core/templates/`) only produces a *candidate*.
+- A human promotes a candidate to an official `template.json`; code never
+  auto-claims officialness.
+- Style is extracted only — never hardcoded. Unknown style stays `확인 필요` / null.
+- Do not claim a style is official unless it was actually extracted from the
+  reference. Text that merely describes a style is evidence, not parsed style.
+- The agent fills blocks; missing facts stay `확인 필요` and are never invented.
 
 ## Protected Skills Rule
 
@@ -102,20 +130,17 @@ Before editing files in a folder, check whether that folder has its own
 If a folder has no `AGENTS.md`, follow this root file and
 `docs/folder-responsibility.md`.
 
-## Canonical Roadmap
+## Work Process
 
-Before proposing, naming, or starting a new loop, read:
+The project tracks work in `docs/ROADMAP.md` and `tasks/`. Before starting new
+work, read `tasks/current_task.md`, `tasks/HANDOFF.md`, and `MEMORY.md` for
+current state; keep `docs/ROADMAP.md` as the canonical process log.
 
-- `docs/ROADMAP.md`
-- `tasks/current_task.md`
-- `tasks/HANDOFF.md`
-- `MEMORY.md`
+Do not renumber past entries, and do not start new work without user approval.
 
-`docs/ROADMAP.md` is the canonical source for loop numbering.
-
-Do not renumber loops based on implementation order.
-
-Do not move to a new loop unless the user explicitly approves it.
+Note: `docs/ROADMAP.md` currently ends at the export-stabilization phase and does
+not yet include the template-first direction. Until the roadmap is updated, that
+direction is authoritative here and in `docs/product-direction.md`.
 
 ## Required Discipline
 

@@ -14,6 +14,9 @@ Convert Markdown or DocumentModel-derived content into final output files.
 - Exporters do not parse source HWP/HWPX input.
 - Pip-native exporters are the default direction.
 - External binary exporters are fallback or experimental only.
+- Exporters may apply an extracted style profile; when a style value is missing
+  they fall back and must record `fallback_used`, never claiming the fallback as
+  the reference's official style.
 
 ## Status language
 

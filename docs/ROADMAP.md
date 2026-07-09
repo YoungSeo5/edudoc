@@ -21,6 +21,7 @@ Loop 8   = validated Markdown -> DOCX/HWPX/PDF export stabilization
 Loop 8.5 = Gongmun reference style profile / DOCX style profile integration
 Loop 9   = pre-commit/CI-based harness automation
 Loop 10  = API/Web wrapper after CLI stabilization
+Loop 11  = Template-first reference-based generation (extract candidate -> curate -> reuse)
 ```
 
 ## Current Status
@@ -36,8 +37,11 @@ Loop 5   = complete
 Loop 5.5 = complete
 Loop 6   = complete
 Loop 7   = implemented early and now complete
-Loop 8   = current canonical loop
+Loop 8   = export slices complete (PDF/HWPX/PPTX remain fallback/experimental)
 Loop 8.5 = complete (inserted Loop 8 sub-loop; does not replace Loop 9/10)
+Loop 9   = pending
+Loop 10  = pending
+Loop 11  = in progress (implemented early; user-directed active work)
 ```
 
 ## Known Deviation Resolved
@@ -53,10 +57,37 @@ Loop 6 was then backfilled through:
 
 - `skills/gongmun_writer/source_notes/gyeonggi_rules_summary.md`
 
-Now that both Loop 6 and Loop 7 are complete, the current canonical loop is Loop 8.
+Both Loop 6 and Loop 7 were then completed, which at the time advanced the
+canonical loop to Loop 8. (The current active loop is now Loop 11 — see below.)
 
 Loop 8.5 is an inserted Loop 8 sub-loop and is complete. It does not replace
 Loop 9 or Loop 10.
+
+## Loop 11 — Template-first reference-based generation (in progress)
+
+User-directed active work. edudoc generates on demand: check whether a template
+for the requested institution × document type exists, use it if so; otherwise
+extract a candidate from a user-provided example; otherwise ask for one. See the
+"Template-first Generation" section in root `AGENTS.md`.
+
+Status:
+
+- Deterministic extraction (done): `core/templates/extract_style.py` (HWPX-only,
+  evidence + confidence), `extract_structure.py`, `.hwp` text candidate
+  (`one_page_report.py`), CLI `scripts/templates/extract_template.py`.
+- Style application (done): extracted style -> DOCX (`apply_style.py`) and HWPX
+  custom header (`build_header.py`), with `fallback_used` honesty.
+- Pending: `load_template()`, official `template.json` under
+  `skills/templates/<institution>/<document_type>/`, and human curation of
+  candidates (code never auto-promotes a candidate to official).
+
+Scope is intentionally minimal: `template.json` + `load` + extract-when-missing +
+fill. Inheritance (`extends`), `rules.toml`, and dedicated extractor/composer
+skills are deferred.
+
+Numbering note: Loops 9 (CI) and 10 (API) remain pending. Loop 11 is user-inserted
+active work and does not renumber them; it generalizes the fixed style profile of
+Loop 8.5 into extracted, per-institution templates.
 
 ## Numbering Policy
 
@@ -71,11 +102,12 @@ Loop 9 or Loop 10.
 ## Current Canonical Loop
 
 ```text
-Loop 8 - validated Markdown -> DOCX/HWPX/PDF export stabilization
+Loop 11 - Template-first reference-based generation (user-directed active work)
 ```
 
-Validation-rule expansion and folder workflow integration are valid future tasks,
-but they are not the next canonical loop unless explicitly inserted by the user.
+Loop 8 export slices are complete (PDF/HWPX/PPTX remain fallback/experimental).
+Loops 9 (CI) and 10 (API) remain valid pending future loops; Loop 11 is the
+user-directed active loop and does not skip or renumber them.
 
 ## Product Direction
 

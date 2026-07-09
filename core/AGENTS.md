@@ -12,6 +12,7 @@ This includes:
 - normalization
 - DocumentModel handling
 - pipeline orchestration
+- template extraction and style-profile handling (`core/templates/`)
 - generation logic
 - export coordination
 
@@ -21,7 +22,8 @@ This includes:
 - Do not place samples or reference documents in `core/`.
 - Do not place tests in `core/`.
 - Do not place AI-facing skill instructions in `core/`.
-- Keep input conversion, generation, validation, and export responsibilities separate.
+- Keep input conversion, template extraction, generation, validation, and export responsibilities separate.
+- `core/templates/` extracts style deterministically and emits template *candidates*; it never invents style or promotes a candidate to official.
 - Prefer small adapters over broad rewrites.
 
 ## Protected skills

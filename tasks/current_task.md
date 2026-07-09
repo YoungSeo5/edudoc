@@ -2,12 +2,14 @@
 
 ## Goal
 
-Continue Loop 8 with the product direction reset applied: edudoc is a document
-task automation system, not a file-format conversion tool.
+Loop 11 — Template-first reference-based generation (user-directed active work).
+edudoc checks whether a template for the requested institution × document type
+exists; uses it if so; otherwise extracts a candidate from a user-provided
+example; otherwise asks for one. See root `AGENTS.md` "Template-first Generation"
+and `docs/ROADMAP.md` Loop 11.
 
-Export stabilization remains useful, but export is the final rendering step after
-source/reference understanding, user request interpretation, generation, and
-document-type validation.
+Export stabilization (Loop 8) remains useful but is the final rendering step, not
+the product goal.
 
 ## Current Status
 
@@ -22,8 +24,21 @@ Loop 5   = complete
 Loop 5.5 = complete
 Loop 6   = complete
 Loop 7   = implemented early and now complete
-Loop 8   = current canonical loop
+Loop 8   = export slices complete (PDF/HWPX/PPTX fallback/experimental)
+Loop 11  = in progress (current active loop)
 ```
+
+Loop 11 status:
+
+- Deterministic extraction (done): `core/templates/extract_style.py` (HWPX-only,
+  evidence + confidence), `extract_structure.py`, `.hwp` text candidate
+  (`one_page_report.py`), CLI `scripts/templates/extract_template.py`.
+- Extracted-style application (done): DOCX (`apply_style.py`) and HWPX custom
+  header (`build_header.py`), with `fallback_used` honesty.
+- Pending: `load_template()`, official `template.json` under
+  `skills/templates/<institution>/<document_type>/`, human curation of candidates
+  (code never auto-promotes to official). template.json to be created during
+  testing.
 
 Loop 8 status:
 

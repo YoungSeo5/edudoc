@@ -14,6 +14,9 @@ The following directories are read-only by default:
 
 Do not edit, delete, rename, move, or refactor these directories unless the user explicitly asks for that exact change.
 
+`skills/templates/` is NOT protected — it holds edudoc-owned institution template
+artifacts (`<institution>/<document_type>/template.json`) and is freely editable.
+
 ## Rule
 
 Use protected skills as reference material.

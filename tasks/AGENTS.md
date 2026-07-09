@@ -8,12 +8,12 @@ Use this folder for current work state only.
 
 ## Rules
 
-- `current_task.md` describes the current loop only.
+- `current_task.md` describes the current task/phase only.
 - `HANDOFF.md` summarizes recent decisions, tests, limitations, and next step.
 - Permanent architecture documentation belongs in `docs/`.
 - Task files must not override `docs/ROADMAP.md`.
 
-Before changing loop status, read:
+Before changing task status, read:
 
 - `docs/ROADMAP.md`
 - `MEMORY.md`

@@ -1,6 +1,15 @@
 # templates/AGENTS.md
 
-`templates/` stores reusable output templates, style profiles, and layout assets.
+`templates/` stores reusable OUTPUT render templates, style profiles, and layout
+assets used by exporters.
+
+Do not confuse the three "template" locations:
+
+- `templates/` (this folder) — output render/style/layout assets.
+- `core/templates/` — deterministic code that extracts template candidates and
+  style profiles from reference documents.
+- `skills/templates/<institution>/<document_type>/` — stored institution template
+  artifacts (`template.json`) that the generation flow loads and fills.
 
 ## Responsibility
 
@@ -8,8 +17,8 @@ Use this folder for files that define reusable output structure or style.
 
 ## Rules
 
-- Templates are not random examples.
-- Templates are not generated outputs.
+- Templates are not random examples and not generated outputs.
 - If a template is documentation-only or loadable-only, say so clearly.
-- Actual reusable template files should go here when provided.
-- Do not create template folders for document types the user has not asked to implement.
+- Add reusable template files here only when provided or requested.
+- Do not create template folders for document types the user has not asked to
+  implement.
