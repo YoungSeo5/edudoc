@@ -25,9 +25,17 @@ class HwpxViaHwpSkillExporter(BaseExporter):
 
     supported_ext = (".hwpx",)
 
-    def __init__(self, template: str = "report", title: str | None = None) -> None:
+    def __init__(
+        self,
+        template: str = "report",
+        title: str | None = None,
+        custom_header: Path | None = None,
+    ) -> None:
         self.template = template if template in _TEMPLATES else "report"
         self.title = title
+        # optional patched header.xml (e.g. from an ExtractedStyleProfile); passed
+        # straight to md2hwpx --header. The skill template stays untouched.
+        self.custom_header = Path(custom_header) if custom_header else None
 
     def _skill_scripts_dir(self) -> Path | None:
         """Locate a usable hwp-skill scripts dir (skill is read-only reference)."""
@@ -78,6 +86,9 @@ class HwpxViaHwpSkillExporter(BaseExporter):
         ]
         if self.title:
             cmd += ["--title", self.title]
+        if self.custom_header and self.custom_header.exists():
+            cmd += ["--header", str(self.custom_header)]
+            meta["custom_header"] = str(self.custom_header)
 
         try:
             build = subprocess.run(

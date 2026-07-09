@@ -21,15 +21,41 @@ def render_report_to_hwpx(
     hwpx_path: Path | str,
     *,
     template: str = "report",
+    style_reference: Path | str | None = None,
 ):
-    """Validate -> clean Markdown -> HWPX. Returns (problems, export_result)."""
+    """Validate -> clean Markdown -> HWPX. Returns (problems, export_result).
+
+    When ``style_reference`` (an HWPX) is given, its body font/size/spacing are
+    extracted and patched into a custom header.xml passed to md2hwpx; fields the
+    reference lacks keep the template value and are recorded in
+    ``export_result.meta['style_fallback_fields']`` (fallback_used honesty).
+    Page margins are not header-settable, so they are left to the template.
+    """
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
+    hwpx_path = Path(hwpx_path)
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
     markdown_path.write_text(report.to_markdown(), encoding="utf-8")
+
+    custom_header: Path | None = None
+    fallback_fields: list[str] | None = None
+    if style_reference is not None:
+        from core.templates.build_header import build_custom_header
+        from core.templates.extract_style import extract_style
+
+        extracted = extract_style(style_reference)
+        header_xml, fallback_fields = build_custom_header(extracted)
+        custom_header = hwpx_path.parent / f"{hwpx_path.stem}.header.xml"
+        custom_header.parent.mkdir(parents=True, exist_ok=True)
+        custom_header.write_text(header_xml, encoding="utf-8")
+
     export_result = HwpxViaHwpSkillExporter(
-        template=template, title=report.title
+        template=template, title=report.title, custom_header=custom_header
     ).export(markdown_path, hwpx_path)
+    if fallback_fields is not None and export_result.ok:
+        export_result.meta["style_source"] = "extracted"
+        export_result.meta["style_fallback_fields"] = fallback_fields
+        export_result.meta["style_fallback_used"] = bool(fallback_fields)
     return problems, export_result
 
 
@@ -57,11 +83,32 @@ def render_report_to_docx(
     report: ComposedReport,
     markdown_path: Path | str,
     docx_path: Path | str,
+    *,
+    style_reference: Path | str | None = None,
 ):
-    """Validate -> clean Markdown -> DOCX (pip-native). Returns (problems, export_result)."""
+    """Validate -> clean Markdown -> DOCX (pip-native). Returns (problems, export_result).
+
+    When ``style_reference`` (an HWPX) is given, its real style is extracted and
+    applied; fields the reference lacks fall back to the default and are recorded
+    in ``export_result.meta['style_fallback_fields']`` (fallback_used honesty).
+    """
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
     markdown_path.write_text(report.to_markdown(), encoding="utf-8")
-    export_result = DocxExporter().export(markdown_path, docx_path)
+
+    style_profile = None
+    fallback_fields: list[str] | None = None
+    if style_reference is not None:
+        from core.templates.apply_style import to_document_style_profile
+        from core.templates.extract_style import extract_style
+
+        extracted = extract_style(style_reference)
+        style_profile, fallback_fields = to_document_style_profile(extracted)
+
+    export_result = DocxExporter(style_profile=style_profile).export(markdown_path, docx_path)
+    if fallback_fields is not None and export_result.ok:
+        export_result.meta["style_source"] = "extracted"
+        export_result.meta["style_fallback_fields"] = fallback_fields
+        export_result.meta["style_fallback_used"] = bool(fallback_fields)
     return problems, export_result
