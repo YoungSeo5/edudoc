@@ -17,6 +17,8 @@ exports/*
 config/secrets.*
 tools/pandoc/pandoc.exe
 tools/typst/typst.exe
+# optional local HWP->HWPX engine (cloned third-party, not vendored)
+tools/hwp2hwpx-python-refactor/
 
 # scratch/experiments (not part of the project)
 sandbox/

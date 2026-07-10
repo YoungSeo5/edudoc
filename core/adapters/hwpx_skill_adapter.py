@@ -51,6 +51,8 @@ def convert_hwp_to_hwpx(
     hwp2hwpx_paths: Iterable[Path | str] = (),
     include_installed: bool = True,
     run_skill_postprocessors: bool = True,
+    reconcile_cell_valign: bool = True,
+    reconcile_char_flags: bool = True,
 ) -> HwpToHwpxResult:
     """Convert HWP to HWPX using an already available hwp2hwpx engine.
 
@@ -83,6 +85,22 @@ def convert_hwp_to_hwpx(
     postprocess_steps: list[str] = []
     if run_skill_postprocessors:
         postprocess_steps = _run_best_effort_postprocessors(skill_path, converted)
+
+    if reconcile_cell_valign:
+        # evidence-based: restore each cell's vertical alignment from the source HWP
+        from .hwp_cell_valign import reconcile_hwpx_cell_valign
+
+        reconciled = reconcile_hwpx_cell_valign(src, converted)
+        if reconciled.get("applied") and reconciled.get("changed"):
+            postprocess_steps.append("reconcile_cell_valign")
+
+    if reconcile_char_flags:
+        # evidence-based: restore pyhwp-authoritative italic/bold from the source HWP
+        from .hwp_char_flags import reconcile_hwpx_char_flags
+
+        flags_result = reconcile_hwpx_char_flags(src, converted)
+        if flags_result.get("applied") and flags_result.get("changed"):
+            postprocess_steps.append("reconcile_char_flags")
 
     return HwpToHwpxResult(
         input_path=src,
