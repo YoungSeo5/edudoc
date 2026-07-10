@@ -152,6 +152,20 @@ direction is authoritative here and in `docs/product-direction.md`.
 - Do not commit generated outputs unless explicitly documented.
 - Report uncertainty instead of pretending a feature is stable.
 
+## Required Information Intake
+
+When a user requests modification, development, extraction, generation, or
+validation, first decide whether the task can be completed with the information
+already available in the repository and the user's message.
+
+If required information is missing, ask the user for that information before
+implementing. Do not guess institution rules, target document type, required
+output format, reference files, approval status, or external tool availability.
+
+If a safe partial implementation is possible, clearly state the assumption and
+keep the result marked as candidate, fallback, or experimental instead of
+claiming it is final.
+
 ## Required Checks
 
 When changing code, run the relevant focused tests.
