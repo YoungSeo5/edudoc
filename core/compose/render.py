@@ -40,8 +40,8 @@ def render_report_to_hwpx(
     custom_header: Path | None = None
     fallback_fields: list[str] | None = None
     if style_reference is not None:
-        from core.templates.build_header import build_custom_header
-        from core.templates.extract_style import extract_style
+        from core.exporters.hwp_skill_header_builder import build_custom_header
+        from core.templates.extractors.style import extract_style
 
         extracted = extract_style(style_reference)
         header_xml, fallback_fields = build_custom_header(extracted)
@@ -100,8 +100,8 @@ def render_report_to_docx(
     style_profile = None
     fallback_fields: list[str] | None = None
     if style_reference is not None:
-        from core.templates.apply_style import to_document_style_profile
-        from core.templates.extract_style import extract_style
+        from core.exporters.extracted_style_mapper import to_document_style_profile
+        from core.templates.extractors.style import extract_style
 
         extracted = extract_style(style_reference)
         style_profile, fallback_fields = to_document_style_profile(extracted)

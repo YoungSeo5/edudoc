@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .profiles import ExtractedStyleProfile
+from core.templates.models import ExtractedStyleProfile
 
 _REPORT_HEADER = (
     Path(__file__).resolve().parents[2]

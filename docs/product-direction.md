@@ -166,11 +166,15 @@ added later as a separate decision.
 ## Current Reality
 
 - HWPX/HWP/Markdown normalization is still an important foundation.
-- The only implemented generation flow is the small deterministic Gongmun
-  harness.
+- Small deterministic Gongmun, public-plan, and one-page-report generation
+  paths exist; they are document-type-specific rather than a general AI runtime.
+- A unified template candidate pipeline now supports deterministic extraction,
+  lint, scoped false-positive memory, automatic refinement, and a success gate.
 - DOCX is partially stabilized as a pip-native final-rendering path.
 - PDF remains fallback/experimental.
-- HWPX export is experimental and not layout-compliant.
+- HWPX export remains partially stabilized; extracted body style can be applied
+  through the HWP-skill header adapter, but institution-perfect layout is not
+  claimed.
 - General report, application, promotional, card-news, presentation, and video
   script generation are product goals, not implemented general features yet.
 

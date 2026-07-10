@@ -1,4 +1,4 @@
-"""core.templates.extract_structure: deterministic body-structure scan of HWPX.
+"""core.templates.extractors.structure: deterministic body-structure scan of HWPX.
 
 Verifies the first-pass scan reports numbering markers, table shapes, and ordered
 body lines from the document's own XML — and stays a candidate (no required/repeat
@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.templates.extract_structure import extract_structure
+from core.templates.extractors.structure import extract_structure
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_HWPX = ROOT / "samples" / "참가신청서 및 사업계획서 양식_기창 (1).hwpx"

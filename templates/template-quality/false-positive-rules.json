@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "rule_id": "FP-GLOBAL-YEAR-BUDGET",
+      "target": "structure.required_sections",
+      "pattern": "(?:\\b20\\d{2}\\b|[\\d,]+\\s*(?:원|천원|만원|억원))",
+      "reason": "연도·금액이 포함된 예시 내용값은 필수 섹션으로 확정하지 않습니다."
+    }
+  ]
+}

@@ -16,7 +16,7 @@ from collections import Counter
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 
-from .profiles import ExtractedStyleProfile
+from ..models import ExtractedStyleProfile
 
 _HWPUNIT_PER_MM = 7200 / 25.4  # 1 inch = 7200 HWPUNIT = 25.4 mm
 

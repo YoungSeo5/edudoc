@@ -1,0 +1,100 @@
+"""Read and write template candidate and approved-template artifacts."""
+from __future__ import annotations
+
+import json
+from copy import deepcopy
+from pathlib import Path
+
+from .models import TemplateCandidate
+from .quality.false_positive import (
+    FalsePositiveRule,
+    learned_rules_from_diagnostics,
+)
+from .quality.gate import GateResult
+from .quality.review import render_review
+from .quality.success_rules import SuccessRules
+
+
+def write_pipeline_artifacts(
+    candidate: TemplateCandidate,
+    gate: GateResult,
+    output_dir: Path | str,
+    *,
+    approve: bool = False,
+    success_rules: SuccessRules | None = None,
+    false_positive_rules: list[FalsePositiveRule] | None = None,
+) -> dict[str, Path]:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
+
+    paths["candidate"] = output_dir / "template.candidate.json"
+    _write_json(paths["candidate"], candidate.to_dict())
+
+    paths["review"] = output_dir / "template.review.md"
+    paths["review"].write_text(render_review(candidate, gate), encoding="utf-8")
+
+    paths["evidence"] = output_dir / "evidence.md"
+    paths["evidence"].write_text(
+        "# Template Evidence\n\n"
+        + "\n".join(f"- {item}" for item in candidate.evidence)
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rules = success_rules or SuccessRules()
+    paths["success_rules"] = output_dir / "success-rules.json"
+    _write_json(paths["success_rules"], rules.to_dict())
+
+    learned = learned_rules_from_diagnostics(candidate)
+    merged_rules = _merge_false_positive_rules(
+        [*(false_positive_rules or []), *learned]
+    )
+    paths["false_positive_rules"] = output_dir / "false-positive-rules.json"
+    _write_json(
+        paths["false_positive_rules"],
+        {"rules": [rule.to_dict() for rule in merged_rules]},
+    )
+
+    if gate.passed:
+        paths["validated"] = output_dir / "template.validated.json"
+        _write_json(paths["validated"], candidate.to_dict())
+        if approve:
+            approved = deepcopy(candidate.to_dict())
+            approved["status"] = "approved"
+            paths["template"] = output_dir / "template.json"
+            _write_json(paths["template"], approved)
+    elif approve:
+        raise ValueError("A rejected template candidate cannot be approved.")
+    return paths
+
+
+def load_candidate(path: Path | str) -> TemplateCandidate:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return TemplateCandidate.from_dict(data)
+
+
+def _write_json(path: Path, data: dict) -> None:
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _merge_false_positive_rules(
+    rules: list[FalsePositiveRule],
+) -> list[FalsePositiveRule]:
+    result: list[FalsePositiveRule] = []
+    seen: set[tuple] = set()
+    for rule in rules:
+        key = (
+            rule.target,
+            rule.pattern,
+            rule.institution,
+            rule.document_type,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(rule)
+    return result

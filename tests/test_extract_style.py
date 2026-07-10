@@ -1,4 +1,4 @@
-"""core.templates.extract_style: deterministic style extraction from HWPX.
+"""core.templates.extractors.style: deterministic style extraction from HWPX.
 
 Proves the extractor pulls real font/size/margin/spacing values out of an HWPX's
 own XML (with evidence), and stays honest — non-HWPX inputs yield no values, not
@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.templates.extract_style import extract_style
+from core.templates.extractors.style import extract_style
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_HWPX = ROOT / "samples" / "참가신청서 및 사업계획서 양식_기창 (1).hwpx"

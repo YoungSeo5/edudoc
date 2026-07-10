@@ -6,7 +6,7 @@ features are complete.
 
 | Folder | Responsibility |
 |---|---|
-| `core/` | Runtime conversion, normalization, generation, pipeline orchestration, and exporter coordination. |
+| `core/` | Runtime conversion, normalization, template extraction/quality control, generation, pipeline orchestration, and exporter coordination. |
 | `core/exporters/` | Final Markdown/DocumentModel rendering to output formats only. Exporters do not invent missing content. |
 | `core/generators/` | Deterministic or future AI-assisted draft generation into Markdown/structured content. |
 | `validators/` | Deterministic validation rules and integrity checks. Validators do not generate or export. |
@@ -14,7 +14,7 @@ features are complete.
 | `scripts/` | Human-invoked wrappers and harness utilities that call existing runtime logic. |
 | `skills/` | Project-local skills and protected external/reference skill packs. Protected skill files are read-only by default. |
 | `references/` | Raw reference documents and source materials. |
-| `templates/` | Reusable templates, style profiles, and layout references. |
+| `templates/` | Reusable render assets and global template-quality rule defaults. |
 | `samples/` | Representative source inputs for manual or documented checks. |
 | `tests/` | Automated tests and immutable fixtures. Tests should use temp output directories. |
 | `docs/` | Durable architecture, roadmap, status, and test documentation. |

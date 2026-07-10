@@ -72,18 +72,20 @@ extract a candidate from a user-provided example; otherwise ask for one. See the
 
 Status:
 
-- Deterministic extraction (done): `core/templates/extract_style.py` (HWPX-only,
-  evidence + confidence), `extract_structure.py`, `.hwp` text candidate
-  (`one_page_report.py`), CLI `scripts/templates/extract_template.py`.
-- Style application (done): extracted style -> DOCX (`apply_style.py`) and HWPX
-  custom header (`build_header.py`), with `fallback_used` honesty.
-- Pending: `load_template()`, official `template.json` under
-  `skills/templates/<institution>/<document_type>/`, and human curation of
-  candidates (code never auto-promotes a candidate to official).
-
-Scope is intentionally minimal: `template.json` + `load` + extract-when-missing +
-fill. Inheritance (`extends`), `rules.toml`, and dedicated extractor/composer
-skills are deferred.
+- Unified deterministic extraction (done): `core/templates/models.py`,
+  `core/templates/extractors/`, and `core/templates/pipeline.py`.
+- Quality controls (done): lint, scoped false-positive memory, automatic
+  refinement, success gate, review output, and per-template rule persistence.
+- Style application (done): extracted style -> DOCX
+  (`core/exporters/extracted_style_mapper.py`) and HWPX custom header
+  (`core/exporters/hwp_skill_header_builder.py`), with `fallback_used` honesty.
+- Approved-template registry (done): `core/templates/registry.py` loads only
+  explicitly approved `template.json` artifacts.
+- HWPX template extraction MVP (done): read-only ZIP inspection, exact raw and
+  template XML copying, section/table/text analysis, and unapplied placeholder
+  candidate reporting.
+- Remaining product integration: select a registry template from a general user
+  request and feed its blocks into the matching document generator.
 
 Numbering note: Loops 9 (CI) and 10 (API) remain pending. Loop 11 is user-inserted
 active work and does not renumber them; it generalizes the fixed style profile of

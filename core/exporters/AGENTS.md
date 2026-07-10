@@ -17,6 +17,8 @@ Convert Markdown or DocumentModel-derived content into final output files.
 - Exporters may apply an extracted style profile; when a style value is missing
   they fall back and must record `fallback_used`, never claiming the fallback as
   the reference's official style.
+- Mapping extracted style to DOCX profiles and building HWP-skill header adapters
+  belong here, not in `core/templates/`.
 
 ## Status language
 

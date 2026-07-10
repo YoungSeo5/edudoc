@@ -16,6 +16,9 @@ Do not edit, delete, rename, move, or refactor these directories unless the user
 
 `skills/templates/` is NOT protected — it holds edudoc-owned institution template
 artifacts (`<institution>/<document_type>/template.json`) and is freely editable.
+Only explicitly approved `template.json` files are loadable by the runtime.
+Candidate, review, evidence, success-rule, and false-positive-rule files may live
+beside an approved template.
 
 ## Rule
 

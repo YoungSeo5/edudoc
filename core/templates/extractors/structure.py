@@ -57,7 +57,7 @@ def extract_structure_from_text(text: str) -> dict:
     """Candidate structure from plain text (for legacy .hwp with no XML section).
 
     Deterministic: numbering/bullet markers at line starts, table placeholders,
-    and ordered lines. No required/repeat judgment — that is human review.
+    and ordered lines. No required/repeat judgment is made here.
     """
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     markers = _marker_system_text(lines)
@@ -68,7 +68,7 @@ def extract_structure_from_text(text: str) -> dict:
         "table_mentions": table_mentions,
         "line_candidates": lines[:_MAX_LINES],
         "paragraph_count": len(lines),
-        "note": "candidate(text-derived) — 필수/반복/필드명은 사람 확인 필요",
+        "note": "candidate(text-derived) — 필수/반복/필드명은 quality gate 미확정",
     }
 
 

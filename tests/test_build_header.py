@@ -1,4 +1,4 @@
-"""core.templates.build_header + HWPX round-trip.
+"""core.exporters.hwp_skill_header_builder + HWPX round-trip.
 
 Proves (1) an ExtractedStyleProfile patches the body font/size/spacing into a copy
 of the report header (skill template untouched), with honest fallback tracking,
@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.compose.render import render_report_to_hwpx
 from core.compose.report import Block, ComposedReport, Section
-from core.templates.build_header import build_custom_header
-from core.templates.profiles import ExtractedStyleProfile
+from core.exporters.hwp_skill_header_builder import build_custom_header
+from core.templates.models import ExtractedStyleProfile
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_HWPX = ROOT / "samples" / "참가신청서 및 사업계획서 양식_기창 (1).hwpx"

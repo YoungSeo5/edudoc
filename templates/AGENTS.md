@@ -1,7 +1,7 @@
 # templates/AGENTS.md
 
 `templates/` stores reusable OUTPUT render templates, style profiles, and layout
-assets used by exporters.
+assets used by exporters, plus project-wide template-quality rule defaults.
 
 Do not confuse the three "template" locations:
 
@@ -10,6 +10,9 @@ Do not confuse the three "template" locations:
   style profiles from reference documents.
 - `skills/templates/<institution>/<document_type>/` — stored institution template
   artifacts (`template.json`) that the generation flow loads and fills.
+- `templates/template-quality/` — global success-rule and false-positive-rule
+  defaults. Institution-specific rule memory belongs beside the institution
+  template under `skills/templates/`.
 
 ## Responsibility
 

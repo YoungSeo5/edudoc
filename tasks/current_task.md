@@ -30,15 +30,25 @@ Loop 11  = in progress (current active loop)
 
 Loop 11 status:
 
-- Deterministic extraction (done): `core/templates/extract_style.py` (HWPX-only,
-  evidence + confidence), `extract_structure.py`, `.hwp` text candidate
-  (`one_page_report.py`), CLI `scripts/templates/extract_template.py`.
-- Extracted-style application (done): DOCX (`apply_style.py`) and HWPX custom
-  header (`build_header.py`), with `fallback_used` honesty.
-- Pending: `load_template()`, official `template.json` under
-  `skills/templates/<institution>/<document_type>/`, human curation of candidates
-  (code never auto-promotes to official). template.json to be created during
-  testing.
+- Unified extraction (done): `core/templates/models.py`,
+  `core/templates/extractors/`, and `core/templates/pipeline.py` produce one
+  `TemplateCandidate` shape from HWPX/HWP references.
+- Template quality pipeline (done): deterministic lint, scoped false-positive
+  memory, automatic refinement (maximum three passes), review generation, and a
+  success gate under `core/templates/quality/`.
+- Extracted-style application (done): DOCX
+  (`core/exporters/extracted_style_mapper.py`) and HWPX custom header
+  (`core/exporters/hwp_skill_header_builder.py`), with `fallback_used` honesty.
+- Approved-template loading (done): `core/templates/registry.py` loads only an
+  explicitly approved `template.json` under
+  `skills/templates/<institution>/<document_type>/`.
+- Explicit approval writes `template.json`; automatic checks write validated
+  candidates and never claim official approval.
+- HWPX template extraction MVP (done):
+  `core/templates/hwpx_package_extractor.py` and
+  `scripts/templates/extract_hwpx_template.py` directly inspect one source HWPX,
+  preserve selected XML/package assets byte-for-byte, and report structure/text/
+  placeholder candidates without rendering, repacking, or replacement.
 
 Loop 8 status:
 

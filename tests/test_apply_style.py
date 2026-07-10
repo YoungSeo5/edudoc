@@ -1,4 +1,4 @@
-"""core.templates.apply_style + DOCX round-trip.
+"""core.exporters.extracted_style_mapper + DOCX round-trip.
 
 Proves (1) extracted style maps onto DocumentStyleProfile with honest fallback
 tracking, and (2) a DOCX rendered with a style_reference actually carries the
@@ -17,8 +17,8 @@ from docx import Document
 from core.compose.render import render_report_to_docx
 from core.compose.report import ComposedReport
 from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
-from core.templates.apply_style import to_document_style_profile
-from core.templates.profiles import ExtractedStyleProfile
+from core.exporters.extracted_style_mapper import to_document_style_profile
+from core.templates.models import ExtractedStyleProfile
 
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE_HWPX = ROOT / "samples" / "참가신청서 및 사업계획서 양식_기창 (1).hwpx"

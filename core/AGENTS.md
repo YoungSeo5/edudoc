@@ -23,7 +23,13 @@ This includes:
 - Do not place tests in `core/`.
 - Do not place AI-facing skill instructions in `core/`.
 - Keep input conversion, template extraction, generation, validation, and export responsibilities separate.
-- `core/templates/` extracts style deterministically and emits template *candidates*; it never invents style or promotes a candidate to official.
+- `core/templates/` owns the unified `TemplateCandidate`, deterministic
+  extractors, lint/false-positive/refinement/success-gate pipeline, serialization,
+  and approved-template registry.
+- Automatic checks may mark a candidate `validated`; only explicit approval may
+  write an official `template.json`.
+- Document-type draft generation belongs in `core/generators/`; extracted-style
+  render mapping belongs in `core/exporters/`.
 - Prefer small adapters over broad rewrites.
 
 ## Protected skills

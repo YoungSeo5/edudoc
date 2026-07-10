@@ -1,0 +1,7 @@
+{
+  "require_evidence": true,
+  "require_structure_signal": true,
+  "forbid_fake_placeholders": true,
+  "forbid_unproven_style": true,
+  "max_error_count": 0
+}

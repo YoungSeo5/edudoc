@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE, DocumentStyleProfile
+from core.templates.models import ExtractedStyleProfile
 
-from .profiles import ExtractedStyleProfile
+from .style_profile import DEFAULT_GONGMUN_STYLE_PROFILE, DocumentStyleProfile
 
 
 def to_document_style_profile(

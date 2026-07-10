@@ -7,8 +7,7 @@ itself states.
 
 Any font/size wording found in the text is returned as *reference-text evidence*
 only — it is the document describing itself, NOT a parsed style record. It must
-never be written into a parsed ``style_profile``; keep it in evidence for human
-review.
+never be written into a parsed ``style_profile``.
 """
 from __future__ import annotations
 

@@ -14,5 +14,7 @@ of inventing structure.
 - Generators do not parse source HWP/HWPX files.
 - Generators do not mutate templates.
 - Generators do not invent missing facts; unknown values stay `확인 필요`.
+- Document-type-specific template filling, such as one-page-report composition,
+  belongs here rather than in `core/templates/`.
 - Generators may call validators only as explicit result checks.
 - Do not create new generator files unless the user explicitly asks for that document type.

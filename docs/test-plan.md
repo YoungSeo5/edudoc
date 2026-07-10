@@ -320,6 +320,30 @@ python tests/test_pdf_export_status.py
 - Not yet automatically tested: layout fidelity, merged cells, page-break behavior, and
   reference-based generation (level 5) beyond the small Gongmun harness.
 
+## Template Quality Pipeline
+
+```bash
+python tests/test_extract_style.py
+python tests/test_extract_structure.py
+python tests/test_template_candidate_public_plan.py
+python tests/test_template_quality_pipeline.py
+python tests/test_hwpx_template_extraction.py
+python tests/test_apply_style.py
+python tests/test_build_header.py
+```
+
+Expected:
+- one `TemplateCandidate` shape is used for HWPX and legacy HWP references
+- fake extracted values and unproven styles cannot pass the success gate
+- scoped false-positive rules remove known bad candidates before validation
+- automatic refinement is bounded to three passes
+- validated output does not become `template.json` without explicit approval
+- extracted style mapping remains separate from template extraction
+- HWPX extraction preserves raw/template XML bytes without namespace rewriting
+- unsafe ZIP paths are rejected and partial output is removed
+- visible `hp:t` text, section paragraph/table counts, table dimensions, and
+  placeholder candidates are reported without modifying section XML
+
 For DOCX/PDF output:
 - output file exists
 - output file size is greater than zero
