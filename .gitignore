@@ -24,6 +24,9 @@ tools/hwp2hwpx-python-refactor/
 sandbox/
 generate.py
 
+# omo agent-workflow plugin state (plans/drafts/evidence) — local tool state
+.omo/
+
 # Document binaries: ignored by default so a stray or sensitive TEST document is
 # never accidentally committed (e.g. by `git add -A`). Put unvetted test inputs
 # in sandbox/ or exports/ (both ignored). Only the curated areas below may hold
