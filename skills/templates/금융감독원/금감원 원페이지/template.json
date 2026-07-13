@@ -1,0 +1,361 @@
+{
+  "identity": {
+    "institution": "금융감독원",
+    "document_type": "금감원 원페이지",
+    "extends": null,
+    "template_id": "fss_one_page",
+    "template_name": "금감원 원페이지"
+  },
+  "reference_path": "금감원 원페이지.hwpx",
+  "reference_format": "hwpx",
+  "schema_version": "1.0",
+  "structure": {
+    "section_files": [
+      "raw/section0.xml"
+    ],
+    "sections": [
+      {
+        "file": "section0.xml",
+        "parsed": true,
+        "paragraph_count": 60,
+        "table_count": 8,
+        "tables": [
+          {
+            "row_count": 1,
+            "column_count": 1
+          },
+          {
+            "row_count": 1,
+            "column_count": 1
+          },
+          {
+            "row_count": 1,
+            "column_count": 3
+          },
+          {
+            "row_count": 1,
+            "column_count": 3
+          },
+          {
+            "row_count": 3,
+            "column_count": 3
+          },
+          {
+            "row_count": 1,
+            "column_count": 1
+          },
+          {
+            "row_count": 1,
+            "column_count": 1
+          },
+          {
+            "row_count": 1,
+            "column_count": 3
+          }
+        ],
+        "visible_text": [
+          "◆◆◆◆◆ 진행상황 및 대응방안",
+          "(◎◎◎◎◎◎국 ◇◇◇◇팀, ’26.7.9.)",
+          "Ⅰ.",
+          "◆◆◆◆◆ 진행상황",
+          "가",
+          "개요",
+          "□",
+          "(맑은고딕 15pt)",
+          "휴먼명조 15pt",
+          "◦휴먼명조 15pt",
+          "(휴먼명조 13pt)",
+          "나",
+          "진행상황",
+          "□",
+          "(맑은고딕 15pt)",
+          "휴먼명조 15pt",
+          "◦휴먼명조 15pt",
+          "(휴먼명조 13pt)",
+          "*맑은 고딕 12pt",
+          "†맑은 고딕 11pt",
+          "〈◈◈◈◈ 관련 현황〉",
+          "※ 맑은고딕 13pt",
+          "◦ 맑은고딕 13pt",
+          "* 맑은고딕 11pt",
+          "Ⅱ.",
+          "대응계획",
+          "󰊱",
+          "(맑은고딕 15pt)",
+          "휴먼명조 15pt",
+          "◦휴먼명조 15pt",
+          "(휴먼명조 13pt)",
+          "󰊲",
+          "(맑은고딕 15pt)",
+          "휴먼명조 15pt",
+          "◦휴먼명조 15pt",
+          "(휴먼명조 13pt)",
+          "⇨ 휴먼명조 15pt",
+          "참고",
+          "HY헤드라인M 15pt"
+        ],
+        "candidate_placeholders": [
+          {
+            "category": "placeholder_symbol",
+            "text": "(◎◎◎◎◎◎국 ◇◇◇◇팀, ’26.7.9.)",
+            "section": "section0.xml",
+            "text_index": 1,
+            "reason": "자리표시 기호 포함"
+          },
+          {
+            "category": "checkbox",
+            "text": "□",
+            "section": "section0.xml",
+            "text_index": 6,
+            "reason": "체크박스 기호 포함"
+          },
+          {
+            "category": "report_title",
+            "text": "대응계획",
+            "section": "section0.xml",
+            "text_index": 25,
+            "reason": "보고·계획 제목 가능성"
+          }
+        ]
+      }
+    ],
+    "candidate_placeholders": [
+      {
+        "category": "placeholder_symbol",
+        "text": "(◎◎◎◎◎◎국 ◇◇◇◇팀, ’26.7.9.)",
+        "section": "section0.xml",
+        "text_index": 1,
+        "reason": "자리표시 기호 포함"
+      },
+      {
+        "category": "checkbox",
+        "text": "□",
+        "section": "section0.xml",
+        "text_index": 6,
+        "reason": "체크박스 기호 포함"
+      },
+      {
+        "category": "report_title",
+        "text": "대응계획",
+        "section": "section0.xml",
+        "text_index": 25,
+        "reason": "보고·계획 제목 가능성"
+      }
+    ]
+  },
+  "writing_rules": {},
+  "style_profile": {
+    "source": "extracted_from_hwpx",
+    "font_family": "휴먼명조",
+    "body_font_size_pt": 15.0,
+    "page_margins_mm": {
+      "top": 8.0,
+      "bottom": 8.0,
+      "left": 20.0,
+      "right": 20.0
+    },
+    "line_spacing": "160%",
+    "heading_styles": [],
+    "table_style": null,
+    "confidence": "high",
+    "evidence": [
+      "Contents/header.xml",
+      "Contents/section0.xml"
+    ]
+  },
+  "renderer": {
+    "preferred_format": "hwpx",
+    "route": "core.adapters.hwpx_template_renderer:render_hwpx_template",
+    "reference_hwpx": "source.hwpx",
+    "fallback": "md2hwpx"
+  },
+  "source_summary": {
+    "file_name": "금감원 원페이지.hwpx",
+    "size_bytes": 38508,
+    "sha256": "49ccc187980d5345ea911e674d52f3b7d36b8b2b5e2312ff8d53eb079ed6781a"
+  },
+  "assets": {
+    "raw_directory": "raw",
+    "template_directory": "template",
+    "content_hpf": "raw/content.hpf",
+    "header_xml": "raw/header.xml",
+    "section_files": [
+      "raw/section0.xml"
+    ],
+    "copied_assets": [
+      {
+        "archive_path": "Contents/header.xml",
+        "raw_path": "raw/header.xml",
+        "size_bytes": 93201,
+        "sha256": "d04059a9eb3ea2688610892ab273712c176894bed89798b571915ef6786eb593"
+      },
+      {
+        "archive_path": "Contents/section0.xml",
+        "raw_path": "raw/section0.xml",
+        "size_bytes": 38615,
+        "sha256": "4d256cd58f684916cba098740b48c8c53db186095c4d9431a05ebe9867869939"
+      },
+      {
+        "archive_path": "Scripts/headerScripts.js",
+        "raw_path": "raw/Scripts/headerScripts.js",
+        "size_bytes": 158,
+        "sha256": "f23abe459e32a899af2081e05752afe193fb00489405be94799b3658b7d5688f"
+      },
+      {
+        "archive_path": "Scripts/sourceScripts.js",
+        "raw_path": "raw/Scripts/sourceScripts.js",
+        "size_bytes": 90,
+        "sha256": "b183762f7dbf29e929380375746fa20260925f89cbfa284a29cf7ab611b8f77a"
+      },
+      {
+        "archive_path": "settings.xml",
+        "raw_path": "raw/settings.xml",
+        "size_bytes": 279,
+        "sha256": "22c5d84b3aa3d5b5b1193be4d5b6049c80d96a4cd618ed7e92c482bb76402c57"
+      },
+      {
+        "archive_path": "META-INF/container.rdf",
+        "raw_path": "raw/META-INF/container.rdf",
+        "size_bytes": 867,
+        "sha256": "0cfd814c20595c841e48e62fbf7591829f13c177fa92af634c8199f85ecf3a89"
+      },
+      {
+        "archive_path": "Contents/content.hpf",
+        "raw_path": "raw/content.hpf",
+        "size_bytes": 2217,
+        "sha256": "28a3fba924c2dd248be176fd27803c3f461f8c39e0dba8eee9aa5e02db6ff80d"
+      },
+      {
+        "archive_path": "META-INF/container.xml",
+        "raw_path": "raw/META-INF/container.xml",
+        "size_bytes": 475,
+        "sha256": "5109d3a9249ec1058177fedab574c5d9616058aa92ebefcd33249ebb36a20f61"
+      },
+      {
+        "archive_path": "META-INF/manifest.xml",
+        "raw_path": "raw/META-INF/manifest.xml",
+        "size_bytes": 134,
+        "sha256": "2b4b155c1bb6a9ccc212fef113c4831d2f558e67cf1260eb314ce54f26fd32ea"
+      }
+    ]
+  },
+  "package_summary": {
+    "detected_internal_files": [
+      "mimetype",
+      "version.xml",
+      "Contents/header.xml",
+      "Contents/section0.xml",
+      "Preview/PrvText.txt",
+      "Scripts/headerScripts.js",
+      "Scripts/sourceScripts.js",
+      "settings.xml",
+      "Preview/PrvImage.png",
+      "META-INF/container.rdf",
+      "Contents/content.hpf",
+      "META-INF/container.xml",
+      "META-INF/manifest.xml"
+    ],
+    "content_hpf": {
+      "parsed": true,
+      "manifest_item_count": 5,
+      "spine_item_count": 4,
+      "items": [
+        {
+          "id": "header",
+          "href": "Contents/header.xml",
+          "media_type": "application/xml"
+        },
+        {
+          "id": "section0",
+          "href": "Contents/section0.xml",
+          "media_type": "application/xml"
+        },
+        {
+          "id": "headersc",
+          "href": "Scripts/headerScripts.js",
+          "media_type": "application/x-javascript ;charset=utf-16"
+        },
+        {
+          "id": "sourcesc",
+          "href": "Scripts/sourceScripts.js",
+          "media_type": "application/x-javascript ;charset=utf-16"
+        },
+        {
+          "id": "settings",
+          "href": "settings.xml",
+          "media_type": "application/xml"
+        }
+      ],
+      "spine": [
+        "header",
+        "section0",
+        "headersc",
+        "sourcesc"
+      ]
+    },
+    "header_style_summary": {
+      "parsed": true,
+      "font_faces": [
+        "맑은 고딕",
+        "함초롬돋움",
+        "함초롬바탕",
+        "휴먼명조",
+        "HY견명조",
+        "HY헤드라인M",
+        "HCI Poppy",
+        "한양신명조",
+        "명조"
+      ],
+      "font_count": 49,
+      "char_property_count": 38,
+      "paragraph_property_count": 29,
+      "style_count": 22,
+      "border_fill_count": 16
+    },
+    "header_xml_present": true,
+    "content_hpf_present": true,
+    "bin_data_present": false,
+    "unprocessed_entries": [
+      "mimetype",
+      "version.xml",
+      "Preview/PrvText.txt",
+      "Preview/PrvImage.png"
+    ],
+    "fixture_comparison": [],
+    "analysis_warnings": [
+      "Unselected package entries were preserved only in the source HWPX and are listed in the report."
+    ],
+    "parse_errors": []
+  },
+  "rendering_rules": {
+    "preserve_header_xml": true,
+    "replace_only_hp_t_text": true,
+    "preserve_table_structure": true,
+    "preserve_linesegarray": true,
+    "do_not_modify_style_ids": true,
+    "self_contained_base": "source.hwpx"
+  },
+  "evidence": [
+    "source HWPX opened directly with Python zipfile.ZipFile",
+    "raw XML copied byte-for-byte without XML serialization",
+    "candidate placeholders were reported but not applied"
+  ],
+  "unknown_fields": [],
+  "diagnostics": [],
+  "status": "approved",
+  "refinement_passes": 0,
+  "format": "hwpx",
+  "template_id": "fss_one_page",
+  "template_name": "금감원 원페이지",
+  "content_separation": {
+    "status": "candidate",
+    "content_sample": "content.sample.json",
+    "placeholder_map": "placeholder_map.json",
+    "review": "template.review.md",
+    "replacement_mode": "hp_t_text_only",
+    "field_count": 39,
+    "template_sections": [
+      "template/section0.template.xml"
+    ]
+  }
+}
