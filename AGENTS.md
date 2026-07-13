@@ -184,6 +184,10 @@ direction is authoritative here and in `docs/product-direction.md`.
 - Do not install external tools without approval.
 - Do not change global machine state without approval.
 - Do not commit generated outputs unless explicitly documented.
+- This repo is public. Keep documents (`*.hwp/.hwpx/.docx/.pptx/.pdf`) out of git
+  except under `references/`, `samples/`, and `skills/templates/`; those are
+  git-ignored everywhere else. Put unvetted or possibly-sensitive test inputs in
+  `sandbox/` (ignored), never in a committed path.
 - Report uncertainty instead of pretending a feature is stable.
 
 ## Required Information Intake

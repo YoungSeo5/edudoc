@@ -23,3 +23,17 @@ tools/hwp2hwpx-python-refactor/
 # scratch/experiments (not part of the project)
 sandbox/
 generate.py
+
+# Document binaries: ignored by default so a stray or sensitive TEST document is
+# never accidentally committed (e.g. by `git add -A`). Put unvetted test inputs
+# in sandbox/ or exports/ (both ignored). Only the curated areas below may hold
+# committed documents — reference fixtures, samples, and self-contained template
+# bases (source.hwpx). To commit a document elsewhere on purpose, use `git add -f`.
+*.hwp
+*.hwpx
+*.docx
+*.pptx
+*.pdf
+!references/**
+!samples/**
+!skills/templates/**
