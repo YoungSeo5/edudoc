@@ -1,12 +1,12 @@
 {
   "identity": {
     "institution": "금융감독원",
-    "document_type": "금감원 원장보고",
+    "document_type": "금감원 원장보고 가상자산 이상거래",
     "extends": null,
-    "template_id": "fss_director_report",
-    "template_name": "금감원 원장보고"
+    "template_id": "fss_virtual_asset_report",
+    "template_name": "금감원 원장보고 가상자산 이상거래"
   },
-  "reference_path": "금감원 원장보고.hwpx",
+  "reference_path": "금감원_원장보고_가상자산 관련 이상거래.hwpx",
   "reference_format": "hwpx",
   "schema_version": "1.0",
   "structure": {
@@ -17,7 +17,7 @@
       {
         "file": "section0.xml",
         "parsed": true,
-        "paragraph_count": 32,
+        "paragraph_count": 31,
         "table_count": 4,
         "tables": [
           {
@@ -40,19 +40,19 @@
         "visible_text": [
           "현안(이슈)보고",
           "(2026. 7. 9.)",
-          "◎◎◎◎ 진행현황",
+          "가상자산 관련 이상거래 현황파악 진행현황",
           "□ 현안검토 □ 언론보도 □ 국회 등 □ 금융위·증선위 ☑ 기타(현황파악)",
           "☑ 요약 또는 배경",
-          "1. 추진 배경(HY헤드라인M 16)",
-          "□ 본문 (휴먼명조 15, 장평 100%, 줄간격 150)",
-          "◦ 본문 (한칸 들여쓰기)",
-          "* 세부통계 등 (맑은 고딕 12, 장평 100%, 줄간격 130)",
-          "† 맑은고딕 11pt",
-          "⇨",
-          "○○○○○○국",
-          "국장 ○○○(☎1111)",
-          "팀장 ☆☆☆(☎2222)",
-          "※ 1페이지 하단에 보고자 및 연락처 등 표시"
+          "1. 추진 배경",
+          "□ 최근 가상자산 시장에서 통상적인 거래 패턴과 상이한 이상매매 정황이 다수 포착됨에 따라, 관련 동향을 파악하고 대응방안을 마련하고자 함",
+          "◦ 시장 모니터링시스템(FDS) 및 거래소 제보를 통해 특정 종목에서 단기간 거래량이 급증하는 사례가 다수 확인되었으며, 관련 계좌의 자금흐름을 점검 중",
+          "* 최근 1개월간 이상매매 의심 신고 : 000건(전월 대비 00% 증가)",
+          "† 세부 수치는 관계기관 확인 후 익일 중 업데이트 예정",
+          "⇨ 향후 조사 진행상황을 지속 모니터링하고, 이상거래 혐의가 확인될 경우 즉시 조사에 착수하여 결과를 보고할 예정",
+          "가상자산감독국",
+          "국장 김도윤(☎02-3145-5501)",
+          "팀장 박서연(☎02-3145-5502)",
+          "끝."
         ],
         "candidate_placeholders": [
           {
@@ -70,15 +70,8 @@
             "reason": "날짜 형식"
           },
           {
-            "category": "placeholder_symbol",
-            "text": "◎◎◎◎ 진행현황",
-            "section": "section0.xml",
-            "text_index": 2,
-            "reason": "자리표시 기호 포함"
-          },
-          {
             "category": "common_report_section",
-            "text": "◎◎◎◎ 진행현황",
+            "text": "가상자산 관련 이상거래 현황파악 진행현황",
             "section": "section0.xml",
             "text_index": 2,
             "reason": "공통 보고서 섹션명"
@@ -106,52 +99,38 @@
           },
           {
             "category": "common_report_section",
-            "text": "1. 추진 배경(HY헤드라인M 16)",
+            "text": "1. 추진 배경",
             "section": "section0.xml",
             "text_index": 5,
             "reason": "공통 보고서 섹션명"
           },
           {
             "category": "checkbox",
-            "text": "□ 본문 (휴먼명조 15, 장평 100%, 줄간격 150)",
+            "text": "□ 최근 가상자산 시장에서 통상적인 거래 패턴과 상이한 이상매매 정황이 다수 포착됨에 따라, 관련 동향을 파악하고 대응방안을 마련하고자 함",
             "section": "section0.xml",
             "text_index": 6,
             "reason": "체크박스 기호 포함"
           },
           {
-            "category": "placeholder_symbol",
-            "text": "○○○○○○국",
+            "category": "department_name",
+            "text": "가상자산감독국",
             "section": "section0.xml",
             "text_index": 11,
-            "reason": "자리표시 기호 포함"
+            "reason": "부서·기관명 형태"
           },
           {
             "category": "phone_number",
-            "text": "국장 ○○○(☎1111)",
+            "text": "국장 김도윤(☎02-3145-5501)",
             "section": "section0.xml",
             "text_index": 12,
             "reason": "전화번호 형식"
           },
           {
-            "category": "placeholder_symbol",
-            "text": "국장 ○○○(☎1111)",
-            "section": "section0.xml",
-            "text_index": 12,
-            "reason": "자리표시 기호 포함"
-          },
-          {
             "category": "phone_number",
-            "text": "팀장 ☆☆☆(☎2222)",
+            "text": "팀장 박서연(☎02-3145-5502)",
             "section": "section0.xml",
             "text_index": 13,
             "reason": "전화번호 형식"
-          },
-          {
-            "category": "placeholder_symbol",
-            "text": "팀장 ☆☆☆(☎2222)",
-            "section": "section0.xml",
-            "text_index": 13,
-            "reason": "자리표시 기호 포함"
           }
         ]
       }
@@ -172,15 +151,8 @@
         "reason": "날짜 형식"
       },
       {
-        "category": "placeholder_symbol",
-        "text": "◎◎◎◎ 진행현황",
-        "section": "section0.xml",
-        "text_index": 2,
-        "reason": "자리표시 기호 포함"
-      },
-      {
         "category": "common_report_section",
-        "text": "◎◎◎◎ 진행현황",
+        "text": "가상자산 관련 이상거래 현황파악 진행현황",
         "section": "section0.xml",
         "text_index": 2,
         "reason": "공통 보고서 섹션명"
@@ -208,52 +180,38 @@
       },
       {
         "category": "common_report_section",
-        "text": "1. 추진 배경(HY헤드라인M 16)",
+        "text": "1. 추진 배경",
         "section": "section0.xml",
         "text_index": 5,
         "reason": "공통 보고서 섹션명"
       },
       {
         "category": "checkbox",
-        "text": "□ 본문 (휴먼명조 15, 장평 100%, 줄간격 150)",
+        "text": "□ 최근 가상자산 시장에서 통상적인 거래 패턴과 상이한 이상매매 정황이 다수 포착됨에 따라, 관련 동향을 파악하고 대응방안을 마련하고자 함",
         "section": "section0.xml",
         "text_index": 6,
         "reason": "체크박스 기호 포함"
       },
       {
-        "category": "placeholder_symbol",
-        "text": "○○○○○○국",
+        "category": "department_name",
+        "text": "가상자산감독국",
         "section": "section0.xml",
         "text_index": 11,
-        "reason": "자리표시 기호 포함"
+        "reason": "부서·기관명 형태"
       },
       {
         "category": "phone_number",
-        "text": "국장 ○○○(☎1111)",
+        "text": "국장 김도윤(☎02-3145-5501)",
         "section": "section0.xml",
         "text_index": 12,
         "reason": "전화번호 형식"
       },
       {
-        "category": "placeholder_symbol",
-        "text": "국장 ○○○(☎1111)",
-        "section": "section0.xml",
-        "text_index": 12,
-        "reason": "자리표시 기호 포함"
-      },
-      {
         "category": "phone_number",
-        "text": "팀장 ☆☆☆(☎2222)",
+        "text": "팀장 박서연(☎02-3145-5502)",
         "section": "section0.xml",
         "text_index": 13,
         "reason": "전화번호 형식"
-      },
-      {
-        "category": "placeholder_symbol",
-        "text": "팀장 ☆☆☆(☎2222)",
-        "section": "section0.xml",
-        "text_index": 13,
-        "reason": "자리표시 기호 포함"
       }
     ]
   },
@@ -261,7 +219,7 @@
   "style_profile": {
     "source": "extracted_from_hwpx",
     "font_family": "맑은 고딕",
-    "body_font_size_pt": 15.0,
+    "body_font_size_pt": 11.0,
     "page_margins_mm": {
       "top": 10.0,
       "bottom": 10.0,
@@ -284,9 +242,9 @@
     "fallback": "md2hwpx"
   },
   "source_summary": {
-    "file_name": "금감원 원장보고.hwpx",
-    "size_bytes": 30110,
-    "sha256": "d1acbe62485df50922aadbadc9a1043d3f737bd0570b2368c3739c35601f3b83"
+    "file_name": "금감원_원장보고_가상자산 관련 이상거래.hwpx",
+    "size_bytes": 48100,
+    "sha256": "3ee3ec38317cdc31d52437e17c171a23c791b6df63a16e58b95b6c2ec2675680"
   },
   "assets": {
     "raw_directory": "raw",
@@ -300,14 +258,14 @@
       {
         "archive_path": "Contents/header.xml",
         "raw_path": "raw/header.xml",
-        "size_bytes": 73945,
-        "sha256": "516117162a2f870a99645ec928318df4faa5e0ea99b42a992f3dbdff53edfe59"
+        "size_bytes": 73944,
+        "sha256": "3fa2133db85c8ae2838c891063e17f4927eef87333d26c31212cbf436f84642b"
       },
       {
         "archive_path": "Contents/section0.xml",
         "raw_path": "raw/section0.xml",
-        "size_bytes": 21651,
-        "sha256": "1ed593fd8e935c30e91725e290a27eb45981daf38ebc7bcce04ae31a97baa283"
+        "size_bytes": 22669,
+        "sha256": "16a6883bbc406ad2a1f65aeac15a9356f6e5f251b0d9b720d9e6482969e5efbc"
       },
       {
         "archive_path": "Scripts/headerScripts.js",
@@ -324,8 +282,8 @@
       {
         "archive_path": "settings.xml",
         "raw_path": "raw/settings.xml",
-        "size_bytes": 280,
-        "sha256": "1054ec6e554f65216ebe39291476c5db2e552b17e0d6b3947ce64e4aeacc158a"
+        "size_bytes": 278,
+        "sha256": "6dbfe5be9bf3beb2cf6604d9bbc2eac1045292629ef2a52ba826a4f336e8d018"
       },
       {
         "archive_path": "META-INF/container.rdf",
@@ -337,7 +295,7 @@
         "archive_path": "Contents/content.hpf",
         "raw_path": "raw/content.hpf",
         "size_bytes": 2181,
-        "sha256": "7ef536015ac55bb1893d3b43e6c2b68cef41b19748c8c4f7b5f6a9cb2327f621"
+        "sha256": "75d2944b93de1990ba4a2bfa08d33ee39e5fd0c0778094be0c7c40a662fca472"
       },
       {
         "archive_path": "META-INF/container.xml",
@@ -413,8 +371,8 @@
         "맑은 고딕",
         "함초롬돋움",
         "함초롬바탕",
-        "HY헤드라인M",
         "휴먼명조",
+        "HY헤드라인M",
         "HCI Poppy",
         "한양신명조",
         "명조"
@@ -459,15 +417,15 @@
   "status": "candidate",
   "refinement_passes": 0,
   "format": "hwpx",
-  "template_id": "fss_director_report",
-  "template_name": "금감원 원장보고",
+  "template_id": "fss_virtual_asset_report",
+  "template_name": "금감원 원장보고 가상자산 이상거래",
   "content_separation": {
     "status": "candidate",
     "content_sample": "content.sample.json",
     "placeholder_map": "placeholder_map.json",
     "review": "template.review.md",
     "replacement_mode": "hp_t_text_only",
-    "field_count": 13,
+    "field_count": 11,
     "template_sections": [
       "template/section0.template.xml"
     ]

@@ -1,0 +1,127 @@
+{
+  "template_id": "fss_virtual_asset_report",
+  "replacement_mode": "hp_t_text_only",
+  "fields": [
+    {
+      "field_id": "date_01",
+      "placeholder": "{{date_01}}",
+      "sample_value": "(2026. 7. 9.)",
+      "category": "date",
+      "section": "section0.xml",
+      "text_node_index": 1,
+      "table": 0,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "document_title_01",
+      "placeholder": "{{document_title_01}}",
+      "sample_value": "가상자산 관련 이상거래 현황파악 진행현황",
+      "category": "document_title",
+      "section": "section0.xml",
+      "text_node_index": 2,
+      "table": 0,
+      "row": 0,
+      "col": 2
+    },
+    {
+      "field_id": "checkbox_line_01",
+      "placeholder": "{{checkbox_line_01}}",
+      "sample_value": "□ 현안검토  □ 언론보도  □ 국회 등  □ 금융위·증선위  ☑ 기타(현황파악)",
+      "category": "checkbox_line",
+      "section": "section0.xml",
+      "text_node_index": 3,
+      "table": 0,
+      "row": 1,
+      "col": 2
+    },
+    {
+      "field_id": "body_paragraph_01",
+      "placeholder": "{{body_paragraph_01}}",
+      "sample_value": "□ 최근 가상자산 시장에서 통상적인 거래 패턴과 상이한 이상매매 정황이 다수 포착됨에 따라, 관련 동향을 파악하고 대응방안을 마련하고자 함",
+      "category": "body_paragraph",
+      "section": "section0.xml",
+      "text_node_index": 8,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "body_bullet_01",
+      "placeholder": "{{body_bullet_01}}",
+      "sample_value": " ◦ 시장 모니터링시스템(FDS) 및 거래소 제보를 통해 특정 종목에서 단기간 거래량이 급증하는 사례가 다수 확인되었으며, 관련 계좌의 자금흐름을 점검 중",
+      "category": "body_bullet",
+      "section": "section0.xml",
+      "text_node_index": 9,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "stat_note_01",
+      "placeholder": "{{stat_note_01}}",
+      "sample_value": "      * 최근 1개월간 이상매매 의심 신고 : 000건(전월 대비 00% 증가)",
+      "category": "stat_note",
+      "section": "section0.xml",
+      "text_node_index": 10,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "detail_note_01",
+      "placeholder": "{{detail_note_01}}",
+      "sample_value": "         † 세부 수치는 관계기관 확인 후 익일 중 업데이트 예정",
+      "category": "detail_note",
+      "section": "section0.xml",
+      "text_node_index": 11,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "conclusion_01",
+      "placeholder": "{{conclusion_01}}",
+      "sample_value": "⇨ 향후 조사 진행상황을 지속 모니터링하고, 이상거래 혐의가 확인될 경우 즉시 조사에 착수하여 결과를 보고할 예정",
+      "category": "conclusion",
+      "section": "section0.xml",
+      "text_node_index": 12,
+      "table": 2,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "department_01",
+      "placeholder": "{{department_01}}",
+      "sample_value": "가상자산감독국",
+      "category": "department",
+      "section": "section0.xml",
+      "text_node_index": 14,
+      "table": 3,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "contact_01",
+      "placeholder": "{{contact_01}}",
+      "sample_value": "국장 김도윤(☎02-3145-5501)",
+      "category": "contact",
+      "section": "section0.xml",
+      "text_node_index": 15,
+      "table": 3,
+      "row": 0,
+      "col": 1
+    },
+    {
+      "field_id": "contact_02",
+      "placeholder": "{{contact_02}}",
+      "sample_value": "팀장 박서연(☎02-3145-5502)",
+      "category": "contact",
+      "section": "section0.xml",
+      "text_node_index": 16,
+      "table": 3,
+      "row": 0,
+      "col": 2
+    }
+  ]
+}

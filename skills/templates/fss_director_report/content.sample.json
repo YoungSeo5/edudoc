@@ -1,0 +1,19 @@
+{
+  "template_id": "fss_director_report",
+  "source_file": "금감원 원장보고.hwpx",
+  "fields": {
+    "date_01": "(2026. 7. 9.)",
+    "document_title_01": "◎◎◎◎ 진행현황",
+    "checkbox_line_01": "□ 현안검토  □ 언론보도  □ 국회 등  □ 금융위·증선위  ☑ 기타(현황파악)",
+    "content_01": "1. 추진 배경(HY헤드라인M 16)",
+    "body_paragraph_01": "□ 본문 (휴먼명조 15, 장평 100%, 줄간격 150) ",
+    "body_bullet_01": " ◦ 본문 (한칸 들여쓰기)",
+    "stat_note_01": "      * 세부통계 등 (맑은 고딕 12, 장평 100%, 줄간격 130)",
+    "detail_note_01": "         † 맑은고딕 11pt",
+    "conclusion_01": "⇨ ",
+    "department_01": "○○○○○○국",
+    "contact_01": "국장 ○○○(☎1111)",
+    "contact_02": "팀장 ☆☆☆(☎2222)",
+    "document_title_02": " ※ 1페이지 하단에 보고자 및 연락처 등 표시"
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "template_id": "fss_director_report",
+  "replacement_mode": "hp_t_text_only",
+  "fields": [
+    {
+      "field_id": "date_01",
+      "placeholder": "{{date_01}}",
+      "sample_value": "(2026. 7. 9.)",
+      "category": "date",
+      "section": "section0.xml",
+      "text_node_index": 1,
+      "table": 0,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "document_title_01",
+      "placeholder": "{{document_title_01}}",
+      "sample_value": "◎◎◎◎ 진행현황",
+      "category": "document_title",
+      "section": "section0.xml",
+      "text_node_index": 2,
+      "table": 0,
+      "row": 0,
+      "col": 2
+    },
+    {
+      "field_id": "checkbox_line_01",
+      "placeholder": "{{checkbox_line_01}}",
+      "sample_value": "□ 현안검토  □ 언론보도  □ 국회 등  □ 금융위·증선위  ☑ 기타(현황파악)",
+      "category": "checkbox_line",
+      "section": "section0.xml",
+      "text_node_index": 3,
+      "table": 0,
+      "row": 1,
+      "col": 2
+    },
+    {
+      "field_id": "content_01",
+      "placeholder": "{{content_01}}",
+      "sample_value": "1. 추진 배경(HY헤드라인M 16)",
+      "category": "content",
+      "section": "section0.xml",
+      "text_node_index": 7,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "body_paragraph_01",
+      "placeholder": "{{body_paragraph_01}}",
+      "sample_value": "□ 본문 (휴먼명조 15, 장평 100%, 줄간격 150) ",
+      "category": "body_paragraph",
+      "section": "section0.xml",
+      "text_node_index": 8,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "body_bullet_01",
+      "placeholder": "{{body_bullet_01}}",
+      "sample_value": " ◦ 본문 (한칸 들여쓰기)",
+      "category": "body_bullet",
+      "section": "section0.xml",
+      "text_node_index": 9,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "stat_note_01",
+      "placeholder": "{{stat_note_01}}",
+      "sample_value": "      * 세부통계 등 (맑은 고딕 12, 장평 100%, 줄간격 130)",
+      "category": "stat_note",
+      "section": "section0.xml",
+      "text_node_index": 10,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "detail_note_01",
+      "placeholder": "{{detail_note_01}}",
+      "sample_value": "         † 맑은고딕 11pt",
+      "category": "detail_note",
+      "section": "section0.xml",
+      "text_node_index": 11,
+      "table": null,
+      "row": null,
+      "col": null
+    },
+    {
+      "field_id": "conclusion_01",
+      "placeholder": "{{conclusion_01}}",
+      "sample_value": "⇨ ",
+      "category": "conclusion",
+      "section": "section0.xml",
+      "text_node_index": 12,
+      "table": 2,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "department_01",
+      "placeholder": "{{department_01}}",
+      "sample_value": "○○○○○○국",
+      "category": "department",
+      "section": "section0.xml",
+      "text_node_index": 14,
+      "table": 3,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "field_id": "contact_01",
+      "placeholder": "{{contact_01}}",
+      "sample_value": "국장 ○○○(☎1111)",
+      "category": "contact",
+      "section": "section0.xml",
+      "text_node_index": 15,
+      "table": 3,
+      "row": 0,
+      "col": 1
+    },
+    {
+      "field_id": "contact_02",
+      "placeholder": "{{contact_02}}",
+      "sample_value": "팀장 ☆☆☆(☎2222)",
+      "category": "contact",
+      "section": "section0.xml",
+      "text_node_index": 16,
+      "table": 3,
+      "row": 0,
+      "col": 2
+    },
+    {
+      "field_id": "document_title_02",
+      "placeholder": "{{document_title_02}}",
+      "sample_value": " ※ 1페이지 하단에 보고자 및 연락처 등 표시",
+      "category": "document_title",
+      "section": "section0.xml",
+      "text_node_index": 18,
+      "table": null,
+      "row": null,
+      "col": null
+    }
+  ]
+}

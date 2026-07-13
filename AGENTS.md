@@ -50,6 +50,40 @@ The default runtime must remain lightweight:
 Heavy or external tools must remain optional/fallback unless the user explicitly
 approves them.
 
+## Core HWPX Template Pipeline
+
+The project root is `C:\Users\work\edudoc`. Treat this as the canonical HWPX
+template workflow:
+
+1. Convert legacy HWP through the edudoc-owned adapter at
+   `core/adapters/hwpx_skill_adapter.py`, using the prepared local engine under
+   `tools/hwp2hwpx-python-refactor/hwp2hwpx/`. Do not auto-install or auto-clone.
+2. Extract the HWPX package with
+   `core/templates/hwpx_package_extractor.py`, then separate fixed XML structure
+   from replaceable content with `core/templates/hwpx_content_separator.py`.
+   The CLI entry point is
+   `scripts/templates/separate_hwpx_template_content.py`.
+3. Store template candidates under `skills/templates/<template-id>/`. The
+   reusable assets live under `template/header.xml` and
+   `template/section*.template.xml`; source evidence remains under `raw/`.
+   Current FSS candidates are `fss_director_report/` and
+   `fss_virtual_asset_report/`.
+4. Load only explicitly approved `template.json` files through
+   `core/templates/registry.py`.
+5. Fill HWPX table cells through
+   `core/adapters/hwpx_table_fill_adapter.py`, using the protected
+   `skills/hwp-skill/scripts/fill_hwpx.py` as a reference/runtime boundary, and
+   verify this behavior with `tests/test_hwpx_table_fill_adapter.py`.
+
+The general renderer that turns every placeholder in
+`section*.template.xml` into a final HWPX is not connected yet. Do not describe
+table-cell filling as complete template rendering.
+
+The earlier proposed files `core/templates/load.py`, `extract_style.py`, and
+`extractor.py` do not exist in the current tree. Their responsibilities are
+currently split across `registry.py`, `extractors/`, and `pipeline.py`; verify
+the tree before documenting or extending them.
+
 ## Layer Boundaries
 
 Keep these layers separate:
