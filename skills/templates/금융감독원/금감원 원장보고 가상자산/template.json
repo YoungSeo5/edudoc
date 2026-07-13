@@ -237,8 +237,8 @@
   },
   "renderer": {
     "preferred_format": "hwpx",
-    "route": null,
-    "reference_hwpx": "raw/header.xml",
+    "route": "core.adapters.hwpx_template_renderer:render_hwpx_template",
+    "reference_hwpx": "source.hwpx",
     "fallback": "md2hwpx"
   },
   "source_summary": {
@@ -410,11 +410,9 @@
     "raw XML copied byte-for-byte without XML serialization",
     "candidate placeholders were reported but not applied"
   ],
-  "unknown_fields": [
-    "renderer.route"
-  ],
+  "unknown_fields": [],
   "diagnostics": [],
-  "status": "candidate",
+  "status": "approved",
   "refinement_passes": 0,
   "format": "hwpx",
   "template_id": "fss_virtual_asset_report",
