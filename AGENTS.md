@@ -212,3 +212,28 @@ When changing dependency, HWP/HWPX priority, or folder policy, run:
 
 If Python execution is blocked by the local environment, report that verification
 could not run.
+
+## HWPX Output Validation
+
+Any HWPX presented as a finished output must pass strict package validation
+before it is delivered:
+
+```python
+import hwpx
+report = hwpx.validate_package(output_path)
+assert report.ok, report.errors        # errors must be 0
+```
+
+- Do not deliver an HWPX that does not validate (`report.ok is False`). A file
+  that merely opens in Hancom is not enough — a lenient reader accepts packages a
+  validator rejects.
+- If validation cannot pass (e.g. no complete base package is available), do not
+  present the file as final. Mark it `incomplete` / `candidate` and state exactly
+  which errors block validation.
+- Never synthesize or drop package scaffolding (mimetype, version.xml,
+  Preview/…, container references) just to make a file open. A template's `raw/`
+  folder is intentionally incomplete and must not be repacked on its own.
+- The supported way to render without the external original is a self-contained
+  template: `core/adapters/hwpx_template_renderer.snapshot_source_hwpx` stores the
+  exact original as `source.hwpx`, and `render_hwpx_template` uses it as the base
+  so the output validates identically to the original.

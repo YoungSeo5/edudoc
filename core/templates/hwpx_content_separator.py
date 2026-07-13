@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..adapters.hwpx_template_renderer import snapshot_source_hwpx
 from .hwpx_package_extractor import HwpxExtractionResult, extract_hwpx_template
 
 
@@ -56,6 +57,8 @@ def separate_hwpx_template_content(
         institution=institution,
     )
     root = Path(output_dir)
+    # self-contain: keep a byte copy of the original so rendering needs no external file
+    snapshot_source_hwpx(source, root)
     section_results = []
     fields: dict[str, Any] = {}
     placeholder_entries = []
@@ -325,6 +328,7 @@ def _update_template_json(
         "template_sections": template_sections,
     }
     data.setdefault("rendering_rules", {})
+    data["rendering_rules"]["self_contained_base"] = "source.hwpx"
     data["rendering_rules"]["replace_only_hp_t_text"] = True
     data["rendering_rules"]["preserve_table_structure"] = True
     data["rendering_rules"]["preserve_linesegarray"] = True
