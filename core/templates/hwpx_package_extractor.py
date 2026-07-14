@@ -176,7 +176,7 @@ def extract_hwpx_template(
                 "preserve_header_xml": True,
                 "replace_only_hp_t_text": True,
                 "preserve_table_structure": True,
-                "preserve_linesegarray": True,
+                "preserve_linesegarray": False,
                 "do_not_modify_style_ids": True,
             },
             evidence=[
@@ -669,6 +669,13 @@ def _render_report(candidate: TemplateCandidate) -> str:
     lines.extend(
         f"- `{key}`: `{value}`"
         for key, value in candidate.rendering_rules.items()
+    )
+    lines.extend(
+        [
+            "- Source/template XML keeps extracted `linesegarray` caches.",
+            "- Rendering removes `linesegarray` caches from changed sections and "
+            "retains them in unchanged sections.",
+        ]
     )
 
     lines.extend(["", "## Fixture Comparison", ""])

@@ -104,6 +104,7 @@ def test_extracts_exact_assets_and_analysis() -> None:
         assert data["status"] == "candidate"
         assert data["rendering_rules"]["preserve_header_xml"] is True
         assert data["rendering_rules"]["replace_only_hp_t_text"] is True
+        assert data["rendering_rules"]["preserve_linesegarray"] is False
         section = data["structure"]["sections"][0]
         assert section["paragraph_count"] == 6
         assert section["table_count"] == 1
@@ -133,6 +134,11 @@ def test_extracts_exact_assets_and_analysis() -> None:
         assert "추진 배경" in report
         assert "rowCnt=`2`, colCnt=`3`" in report
         assert "Candidate Placeholders (Not Applied)" in report
+        assert "- Source/template XML keeps extracted `linesegarray` caches." in report
+        assert (
+            "- Rendering removes `linesegarray` caches from changed sections and "
+            "retains them in unchanged sections."
+        ) in report
 
 
 def test_rejects_zip_path_escape_and_cleans_partial_output() -> None:

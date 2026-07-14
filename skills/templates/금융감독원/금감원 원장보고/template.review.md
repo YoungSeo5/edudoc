@@ -2,7 +2,9 @@
 
 - Template ID: `fss_director_report`
 - Status: `candidate`
-- XML structure, style IDs, table shapes, and linesegarray are preserved.
+- XML structure, style IDs, and table shapes are preserved.
+- Rendering removes `linesegarray` caches from changed sections so Hancom can recalculate text layout.
+- Rendering retains `linesegarray` caches in unchanged sections.
 - Only selected `<hp:t>` text contents were replaced with placeholders.
 
 ## Sections

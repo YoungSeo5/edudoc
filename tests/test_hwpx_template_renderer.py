@@ -12,6 +12,9 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from xml.sax.saxutils import escape
+
+import hwpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -25,7 +28,12 @@ from core.adapters.hwpx_template_renderer import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-FSS_DIR = ROOT / "skills" / "templates" / "fss_virtual_asset_report"
+FSS_DIR = ROOT / "skills" / "templates" / "금융감독원" / "금감원 원장보고 가상자산"
+REGISTERED_FSS_DIRS = (
+    ROOT / "skills" / "templates" / "금융감독원" / "금감원 원장보고",
+    FSS_DIR,
+    ROOT / "skills" / "templates" / "금융감독원" / "금감원 원페이지",
+)
 BROTHER_HWPX = ROOT / "references" / "document-types" / "public-plan" / "브라더 공공기관 보고서 양식.hwpx"
 
 
@@ -83,6 +91,87 @@ def test_fill_removes_stale_linesegarray_after_text_replacement() -> None:
     section0 = sections["Contents/section0.xml"]
     assert "새로 채운 긴 본문" in section0
     assert "<hp:linesegarray" not in section0
+
+
+def test_fill_removes_cache_only_from_changed_section() -> None:
+    changed_xml = (
+        "<hp:p><hp:run><hp:t>{{x}}</hp:t></hp:run>"
+        '<hp:linesegarray><hp:lineseg textpos="0"/></hp:linesegarray></hp:p>'
+    )
+    unchanged_xml = (
+        "<hp:p><hp:run><hp:t>고정 본문</hp:t></hp:run>"
+        '<hp:linesegarray><hp:lineseg textpos="0"/></hp:linesegarray></hp:p>'
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        template_dir = _write_template_dir(Path(tmp), changed_xml, "x")
+        (template_dir / "template" / "section1.template.xml").write_text(
+            unchanged_xml,
+            encoding="utf-8",
+        )
+
+        sections, result = fill_template_sections(template_dir, {"x": "변경 본문"})
+
+    assert "<hp:linesegarray" not in sections["Contents/section0.xml"]
+    assert sections["Contents/section1.xml"] == unchanged_xml
+    assert "<hp:linesegarray" in sections["Contents/section1.xml"]
+    assert result.leftover_placeholders == []
+
+
+def test_fill_handles_short_long_and_newline_values() -> None:
+    template_xml = (
+        "<hp:p><hp:run><hp:t>{{x}}</hp:t></hp:run>"
+        '<hp:linesegarray><hp:lineseg textpos="0"/></hp:linesegarray></hp:p>'
+    )
+    values = (
+        "짧은 문구",
+        "긴 문구 " * 80,
+        "첫째 줄\n둘째 줄",
+    )
+    for value in values:
+        with tempfile.TemporaryDirectory() as tmp:
+            template_dir = _write_template_dir(Path(tmp), template_xml, "x")
+
+            sections, result = fill_template_sections(template_dir, {"x": value})
+
+        section0 = sections["Contents/section0.xml"]
+        assert escape(value) in section0
+        assert result.leftover_placeholders == []
+        assert "{{" not in section0
+        assert "<hp:linesegarray" not in section0
+
+
+def test_registered_fss_templates_render_text_shapes_without_placeholders() -> None:
+    values = (
+        "짧은 문구",
+        "긴 문구 " * 80,
+        "첫째 줄\n둘째 줄",
+    )
+    for template_dir in REGISTERED_FSS_DIRS:
+        for index, value in enumerate(values):
+            content = load_content_fields(template_dir / "content.sample.json")
+            first_field = next(iter(content))
+            content[first_field] = value
+            with tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp) / f"rendered-{index}.hwpx"
+
+                result = render_hwpx_template(template_dir, content, output)
+
+                assert result.leftover_placeholders == []
+                assert result.missing_fields == []
+                with zipfile.ZipFile(output) as package:
+                    for template_file in sorted(
+                        (template_dir / "template").glob("section*.template.xml")
+                    ):
+                        section_number = re.search(r"section(\d+)", template_file.name)
+                        assert section_number is not None
+                        section_xml = package.read(
+                            f"Contents/section{section_number.group(1)}.xml"
+                        ).decode("utf-8")
+                        assert "{{" not in section_xml
+                        assert "<hp:linesegarray" not in section_xml
+                validation = hwpx.validate_package(output)
+                assert validation.ok is True
+                assert list(validation.errors) == []
 
 
 def test_render_replaces_only_section_in_base_hwpx() -> None:
@@ -156,6 +245,9 @@ if __name__ == "__main__":
     test_fill_reports_missing_and_keeps_placeholder()
     test_fill_xml_escapes_values()
     test_fill_removes_stale_linesegarray_after_text_replacement()
+    test_fill_removes_cache_only_from_changed_section()
+    test_fill_handles_short_long_and_newline_values()
+    test_registered_fss_templates_render_text_shapes_without_placeholders()
     test_render_replaces_only_section_in_base_hwpx()
     test_self_contained_template_renders_without_external_base()
     test_render_validates_output_by_default()

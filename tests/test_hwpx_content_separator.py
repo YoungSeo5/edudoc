@@ -94,6 +94,17 @@ def test_separator_preserves_footer_instruction_as_fixed_text() -> None:
         assert mapping["fields"][0]["col"] == 1
         updated_template = json.loads((output / "template.json").read_text(encoding="utf-8"))
         assert updated_template["content_separation"]["status"] == "candidate"
+        assert updated_template["rendering_rules"]["preserve_linesegarray"] is False
+        review = result.review.read_text(encoding="utf-8")
+        assert "- XML structure, style IDs, and table shapes are preserved." in review
+        assert (
+            "- Rendering removes `linesegarray` caches from changed sections so "
+            "Hancom can recalculate text layout."
+        ) in review
+        assert (
+            "- Rendering retains `linesegarray` caches in unchanged sections."
+        ) in review
+        assert "linesegarray are preserved" not in review
 
 
 if __name__ == "__main__":

@@ -280,7 +280,10 @@ def _review_text(
         "",
         f"- Template ID: `{template_id}`",
         "- Status: `candidate`",
-        "- XML structure, style IDs, table shapes, and linesegarray are preserved.",
+        "- XML structure, style IDs, and table shapes are preserved.",
+        "- Rendering removes `linesegarray` caches from changed sections so "
+        "Hancom can recalculate text layout.",
+        "- Rendering retains `linesegarray` caches in unchanged sections.",
         "- Only selected `<hp:t>` text contents were replaced with placeholders.",
         "",
         "## Sections",
@@ -334,5 +337,5 @@ def _update_template_json(
     data["rendering_rules"]["self_contained_base"] = "source.hwpx"
     data["rendering_rules"]["replace_only_hp_t_text"] = True
     data["rendering_rules"]["preserve_table_structure"] = True
-    data["rendering_rules"]["preserve_linesegarray"] = True
+    data["rendering_rules"]["preserve_linesegarray"] = False
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

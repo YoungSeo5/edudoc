@@ -402,8 +402,9 @@
     "preserve_header_xml": true,
     "replace_only_hp_t_text": true,
     "preserve_table_structure": true,
-    "preserve_linesegarray": true,
-    "do_not_modify_style_ids": true
+    "preserve_linesegarray": false,
+    "do_not_modify_style_ids": true,
+    "self_contained_base": "source.hwpx"
   },
   "evidence": [
     "source HWPX opened directly with Python zipfile.ZipFile",
