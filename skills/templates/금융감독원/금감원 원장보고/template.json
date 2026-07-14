@@ -465,7 +465,7 @@
     "placeholder_map": "placeholder_map.json",
     "review": "template.review.md",
     "replacement_mode": "hp_t_text_only",
-    "field_count": 13,
+    "field_count": 12,
     "template_sections": [
       "template/section0.template.xml"
     ]

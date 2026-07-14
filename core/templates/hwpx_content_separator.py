@@ -6,7 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 from ..adapters.hwpx_template_renderer import snapshot_source_hwpx
 from .hwpx_package_extractor import HwpxExtractionResult, extract_hwpx_template
@@ -21,6 +21,7 @@ _T_NODE_RE = re.compile(
 )
 _DATE_RE = re.compile(r"(?:20\d{2}|'\d{2})[.년]\s*\d{1,2}")
 _PHONE_RE = re.compile(r"☎|0\d{1,2}-\d{3,4}-\d{4}|\d{3,4}-\d{4}")
+_FIXED_TEXTS: Final = frozenset({"※ 1페이지 하단에 보고자 및 연락처 등 표시"})
 _STABLE_TEXTS = {
     "현안(이슈)보고",
     "☑ 요약 또는 배경",
@@ -132,7 +133,9 @@ def _section_decisions(path: Path) -> list[dict[str, Any]]:
         text = "".join(node.itertext())
         normalized = _normalize(text)
         category = _category(normalized)
-        replace = bool(normalized) and category != "fixed_label"
+        if normalized in _FIXED_TEXTS:
+            category = "fixed_text"
+        replace = bool(normalized) and category not in {"fixed_label", "fixed_text"}
         field_id = None
         if replace:
             counters[category] = counters.get(category, 0) + 1

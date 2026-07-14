@@ -133,17 +133,6 @@
       "table": 3,
       "row": 0,
       "col": 2
-    },
-    {
-      "field_id": "document_title_02",
-      "placeholder": "{{document_title_02}}",
-      "sample_value": " ※ 1페이지 하단에 보고자 및 연락처 등 표시",
-      "category": "document_title",
-      "section": "section0.xml",
-      "text_node_index": 18,
-      "table": null,
-      "row": null,
-      "col": null
     }
   ]
 }

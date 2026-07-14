@@ -7,7 +7,7 @@
 
 ## Sections
 
-- `section0.xml`: text_nodes=19, placeholders=13
+- `section0.xml`: text_nodes=19, placeholders=12
 
 ## Placeholder Fields
 
@@ -23,4 +23,3 @@
 - `department_01` -> `{{department_01}}` [department] (table=3, row=0, col=0)
 - `contact_01` -> `{{contact_01}}` [contact] (table=3, row=0, col=1)
 - `contact_02` -> `{{contact_02}}` [contact] (table=3, row=0, col=2)
-- `document_title_02` -> `{{document_title_02}}` [document_title]

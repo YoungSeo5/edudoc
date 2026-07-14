@@ -38,6 +38,8 @@ SECTION = (
     '<hp:subList><hp:p><hp:run><hp:t>가상자산 관련 이상거래 현황파악 진행현황</hp:t></hp:run></hp:p></hp:subList>'
     "</hp:tc></hp:tr></hp:tbl></hp:run></hp:p>"
     "<hp:p><hp:run><hp:t>□ 최근 이상매매 정황이 포착됨</hp:t></hp:run></hp:p>"
+    "<hp:p><hp:run><hp:t>※ 보고 일정은 별도 안내</hp:t></hp:run></hp:p>"
+    "<hp:p><hp:run><hp:t>※ 1페이지 하단에 보고자 및 연락처 등 표시</hp:t></hp:run></hp:p>"
     "<hp:p><hp:run><hp:t>끝.</hp:t></hp:run></hp:p>"
     "</hs:sec>"
 )
@@ -52,13 +54,15 @@ def _write_hwpx(path: Path) -> None:
         package.writestr("settings.xml", "<settings/>")
 
 
-def test_separate_hwpx_template_content_writes_placeholder_artifacts() -> None:
+def test_separator_preserves_footer_instruction_as_fixed_text() -> None:
+    # Given: a report with the exact fixed footer and a different ※ report text.
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         source = root / "source.hwpx"
         output = root / "template"
         _write_hwpx(source)
 
+        # When: the source is separated into content and fixed template XML.
         result = separate_hwpx_template_content(
             source,
             output,
@@ -73,10 +77,16 @@ def test_separate_hwpx_template_content_writes_placeholder_artifacts() -> None:
             encoding="utf-8"
         )
 
+        # Then: only the exact footer stays fixed; the other text remains replaceable.
         assert content["fields"]["document_title_01"] == "가상자산 관련 이상거래 현황파악 진행현황"
+        assert content["fields"]["document_title_02"] == "※ 보고 일정은 별도 안내"
         assert content["fields"]["body_paragraph_01"] == "□ 최근 이상매매 정황이 포착됨"
+        assert "footer_instruction_01" not in content["fields"]
         assert "{{document_title_01}}" in section_template
+        assert "{{document_title_02}}" in section_template
         assert "{{body_paragraph_01}}" in section_template
+        assert "※ 1페이지 하단에 보고자 및 연락처 등 표시" in section_template
+        assert "{{footer_instruction_01}}" not in section_template
         assert "현안(이슈)보고" in section_template
         assert "끝." in section_template
         assert mapping["fields"][0]["table"] == 0
@@ -87,5 +97,5 @@ def test_separate_hwpx_template_content_writes_placeholder_artifacts() -> None:
 
 
 if __name__ == "__main__":
-    test_separate_hwpx_template_content_writes_placeholder_artifacts()
+    test_separator_preserves_footer_instruction_as_fixed_text()
     print("PASS: HWPX content separator")
