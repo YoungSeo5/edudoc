@@ -190,6 +190,18 @@ direction is authoritative here and in `docs/product-direction.md`.
   `sandbox/` (ignored), never in a committed path.
 - Report uncertainty instead of pretending a feature is stable.
 
+## Current-HEAD Evidence Rule
+
+- Do not use `exports/`, `sandbox/`, `.omo/`, caches (`.pytest_cache/` etc.), or
+  `*.log` files as evidence of the current implementation.
+- Prove every implemented, unimplemented, or bug claim from canonical source
+  files at the current Git `HEAD` and from a current execution or test result.
+- For each such claim, report the canonical file path inspected and the exact
+  command that reproduces the evidence.
+- Historical notes and generated or temporary artifacts may provide context,
+  but they never prove current behavior. If current source and execution do not
+  establish a claim, mark it unverified instead of inferring it.
+
 ## Required Information Intake
 
 When a user requests modification, development, extraction, generation, or
