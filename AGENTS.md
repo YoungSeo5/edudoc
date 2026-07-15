@@ -63,11 +63,13 @@ template workflow:
    from replaceable content with `core/templates/hwpx_content_separator.py`.
    The CLI entry point is
    `scripts/templates/separate_hwpx_template_content.py`.
-3. Store template candidates under `skills/templates/<template-id>/`. The
+3. Store templates under `skills/templates/<institution>/<document-type>/`. The
    reusable assets live under `template/header.xml` and
    `template/section*.template.xml`; source evidence remains under `raw/`.
-   Current FSS candidates are `fss_director_report/` and
-   `fss_virtual_asset_report/`.
+   The current FSS templates are `금융감독원/금감원 원장보고/`
+   (`fss_director_report`), `금융감독원/금감원 원장보고 가상자산/`
+   (`fss_virtual_asset_report`), and `금융감독원/금감원 원페이지/`
+   (`fss_one_page`).
 4. Load only explicitly approved `template.json` files through
    `core/templates/registry.py`.
 5. Fill HWPX table cells through

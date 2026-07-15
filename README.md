@@ -79,10 +79,12 @@ skills/templates/<template-id>/
    └─ section0.template.xml
 ```
 
-현재 저장된 금감원 계열 템플릿 후보는 다음과 같습니다.
+템플릿은 `skills/templates/<기관>/<문서 유형>/`에 저장합니다. 현재 저장된 금감원
+계열 템플릿은 다음과 같습니다(모두 `approved`).
 
-* 금감원 원장보고: `skills/templates/fss_director_report/`
-* 금감원 가상자산 보고: `skills/templates/fss_virtual_asset_report/`
+* 금감원 원장보고 (`fss_director_report`): `skills/templates/금융감독원/금감원 원장보고/`
+* 금감원 원장보고 가상자산 이상거래 (`fss_virtual_asset_report`): `skills/templates/금융감독원/금감원 원장보고 가상자산/`
+* 금감원 원페이지 (`fss_one_page`): `skills/templates/금융감독원/금감원 원페이지/`
 
 자동 추출 결과는 후보입니다. `template.json`의 상태가 명시적으로 `approved`인
 템플릿만 `core/templates/registry.py`의 `TemplateRegistry`가 로드합니다.
