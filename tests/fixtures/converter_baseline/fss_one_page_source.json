@@ -1,0 +1,203 @@
+{
+  "document_model": {
+    "attachments": [],
+    "format": "hwpx",
+    "paragraphs": [
+      {
+        "index": 0,
+        "style": null,
+        "text": "(◎◎◎◎◎◎국 ◇◇◇◇팀, ’26.7.9.)"
+      },
+      {
+        "index": 1,
+        "style": null,
+        "text": "(맑은고딕 15pt)휴먼명조 15pt"
+      },
+      {
+        "index": 2,
+        "style": null,
+        "text": "(휴먼명조 13pt)"
+      },
+      {
+        "index": 3,
+        "style": null,
+        "text": "(맑은고딕 15pt)휴먼명조 15pt"
+      },
+      {
+        "index": 4,
+        "style": null,
+        "text": "(휴먼명조 13pt)"
+      },
+      {
+        "index": 5,
+        "style": null,
+        "text": "(맑은고딕 15pt)휴먼명조 15pt"
+      },
+      {
+        "index": 6,
+        "style": null,
+        "text": "(휴먼명조 13pt)"
+      },
+      {
+        "index": 7,
+        "style": null,
+        "text": "(맑은고딕 15pt)휴먼명조 15pt"
+      },
+      {
+        "index": 8,
+        "style": null,
+        "text": "(휴먼명조 13pt)"
+      }
+    ],
+    "raw_meta": {
+      "attachment_count": 0,
+      "binary_file_count": 0,
+      "content_hpf_present": true,
+      "converter": "HwpSkillConverter",
+      "creator_candidate": "ohyou",
+      "document_title_candidate": "◎◎◎◎◎◎국 ◇◇◇◇팀",
+      "extracted_native_fields": [
+        "hwpx_package_detected",
+        "native_metadata_available",
+        "native_metadata_source",
+        "xml_file_count",
+        "section_file_count",
+        "binary_file_count",
+        "media_file_count",
+        "package_entries"
+      ],
+      "extracted_xml_fields": [
+        "content_hpf_present",
+        "manifest_present",
+        "header_xml_present",
+        "section_files",
+        "document_title_candidate",
+        "creator_candidate",
+        "manifest_item_count",
+        "header_section_count",
+        "odf_manifest_file_entry_count"
+      ],
+      "header_section_count": 1,
+      "header_xml_present": true,
+      "hwpx_package_detected": true,
+      "manifest_item_count": 5,
+      "manifest_present": true,
+      "media_file_count": 0,
+      "native_metadata_available": true,
+      "native_metadata_source": "zip_package",
+      "odf_manifest_file_entry_count": 0,
+      "package_entries": [
+        "Contents/content.hpf",
+        "Contents/header.xml",
+        "Contents/section0.xml",
+        "META-INF/container.rdf",
+        "META-INF/container.xml",
+        "META-INF/manifest.xml",
+        "Preview/PrvImage.png",
+        "Preview/PrvText.txt",
+        "Scripts/headerScripts.js",
+        "Scripts/sourceScripts.js",
+        "mimetype",
+        "settings.xml",
+        "version.xml"
+      ],
+      "paragraph_count": 9,
+      "section_file_count": 1,
+      "section_files": [
+        "Contents/section0.xml"
+      ],
+      "structure_source": "hwpx_xml_metadata_plus_markdown_fallback",
+      "table_count": 8,
+      "xml_file_count": 6,
+      "xml_metadata_available": true
+    },
+    "source_path": "source.hwpx",
+    "tables": [
+      {
+        "index": 0,
+        "rows": [
+          [
+            "◆◆◆◆◆ 진행상황 및 대응방안"
+          ]
+        ]
+      },
+      {
+        "index": 1,
+        "rows": [
+          [
+            "Ⅰ. ◆◆◆◆◆ 진행상황"
+          ]
+        ]
+      },
+      {
+        "index": 2,
+        "rows": [
+          [
+            "가",
+            "",
+            "개요"
+          ]
+        ]
+      },
+      {
+        "index": 3,
+        "rows": [
+          [
+            "나",
+            "",
+            "진행상황"
+          ]
+        ]
+      },
+      {
+        "index": 4,
+        "rows": [
+          [
+            "",
+            "〈",
+            ""
+          ],
+          [
+            "",
+            "",
+            ""
+          ],
+          [
+            "",
+            "",
+            ""
+          ]
+        ]
+      },
+      {
+        "index": 5,
+        "rows": [
+          [
+            "Ⅱ. 대응계획"
+          ]
+        ]
+      },
+      {
+        "index": 6,
+        "rows": [
+          [
+            "⇨ 휴먼명조 15pt"
+          ]
+        ]
+      },
+      {
+        "index": 7,
+        "rows": [
+          [
+            "참고",
+            "",
+            ""
+          ]
+        ]
+      }
+    ],
+    "title": null
+  },
+  "markdown": "| ◆◆◆◆◆ 진행상황 및 대응방안 |\n| --- |\n\n(◎◎◎◎◎◎국 ◇◇◇◇팀, ’26.7.9.)\n\n| Ⅰ. ◆◆◆◆◆ 진행상황 |\n| --- |\n\n| 가 |  | 개요 |\n| --- | --- | --- |\n\n(맑은고딕 15pt)휴먼명조 15pt\n\n(휴먼명조 13pt)\n\n| 나 |  | 진행상황 |\n| --- | --- | --- |\n\n(맑은고딕 15pt)휴먼명조 15pt\n\n(휴먼명조 13pt)\n\n|  | 〈 |  |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n\n| Ⅱ. 대응계획 |\n| --- |\n\n(맑은고딕 15pt)휴먼명조 15pt\n\n(휴먼명조 13pt)\n\n(맑은고딕 15pt)휴먼명조 15pt\n\n(휴먼명조 13pt)\n\n| ⇨ 휴먼명조 15pt |\n| --- |\n\n| 참고 |  |  |\n| --- | --- | --- |",
+  "source": "skills/templates/금융감독원/금감원 원페이지/source.hwpx"
+}

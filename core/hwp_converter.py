@@ -15,12 +15,16 @@ settings; HWP input does not imply final HWPX output.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from .adapters.hwpx_skill_adapter import HwpToHwpxAdapterError, convert_hwp_to_hwpx
 from .converter_base import BaseConverter, ConvertResult
 from .document_model import DocumentModel, document_model_from_markdown
+from .hwpx_locators import read_native_locators
 from .hwpx_metadata import inspect_hwpx_package
+
+logger = logging.getLogger(__name__)
 
 
 class HwpSkillConverter(BaseConverter):
@@ -152,7 +156,7 @@ class HwpSkillConverter(BaseConverter):
             if native_meta.get("native_metadata_available")
             else "markdown_fallback"
         )
-        return document_model_from_markdown(
+        model = document_model_from_markdown(
             source_path=source_path,
             file_format=file_format,
             markdown=markdown,
@@ -162,6 +166,41 @@ class HwpSkillConverter(BaseConverter):
                 **extra_meta,
                 **native_meta,
             },
+        )
+        self._attach_native_locators(model, hwpx_path, file_format=file_format)
+        return model
+
+    def _attach_native_locators(
+        self,
+        model: DocumentModel,
+        hwpx_path: Path,
+        *,
+        file_format: str,
+    ) -> None:
+        """Add source coordinates for citation. Never changes existing fields.
+
+        The Markdown round-trip cannot be cited (it merges and drops paragraphs),
+        so the original paragraph order and table cell coordinates are read from
+        the package and stored alongside. Failure here must not fail a conversion
+        that already succeeded: the document simply carries no locators.
+        """
+        try:
+            paragraphs, cells = read_native_locators(hwpx_path)
+        except Exception as exc:  # noqa: BLE001 - locators are additive, never required
+            # Losing locators means losing citation provenance: say so, loudly and in the data.
+            logger.warning("native HWPX locators unavailable for %s: %r", hwpx_path, exc)
+            model.raw_meta["locator_error"] = repr(exc)
+            return
+
+        if not paragraphs and not cells:
+            return
+
+        model.native_paragraphs = paragraphs
+        model.native_table_cells = cells
+        model.locator_source = (
+            "hwpx_native"
+            if file_format == "hwpx"
+            else "hwpx_native_via_hwp_conversion"
         )
 
     def _convert_hwp_legacy(self, path: Path) -> str:

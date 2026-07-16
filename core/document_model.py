@@ -26,6 +26,28 @@ class AttachmentNode:
 
 
 @dataclass
+class NativeParagraph:
+    """A paragraph as it exists in the source package, in document order.
+
+    Parallel to ``DocumentModel.paragraphs``, never a replacement: the Markdown
+    round-trip merges and drops paragraphs, so the two lists do not line up.
+    This index is what a citation can point at.
+    """
+    index: int
+    text: str
+    section: int = 0
+
+
+@dataclass
+class NativeTableCell:
+    """A table cell addressed by its source coordinates."""
+    table: int
+    row: int
+    column: int
+    text: str
+
+
+@dataclass
 class DocumentModel:
     source_path: str
     format: str
@@ -34,9 +56,21 @@ class DocumentModel:
     tables: list[TableNode] = field(default_factory=list)
     attachments: list[AttachmentNode] = field(default_factory=list)
     raw_meta: dict[str, Any] = field(default_factory=dict)
+    # Optional provenance index. Empty for inputs whose source coordinates
+    # cannot be recovered (Markdown, legacy pyhwp HWP fallback).
+    native_paragraphs: list[NativeParagraph] = field(default_factory=list)
+    native_table_cells: list[NativeTableCell] = field(default_factory=list)
+    locator_source: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        # Keep the serialized shape identical for inputs that carry no locators.
+        for key in ("native_paragraphs", "native_table_cells"):
+            if not data[key]:
+                data.pop(key)
+        if data["locator_source"] is None:
+            data.pop("locator_source")
+        return data
 
 
 def document_model_from_markdown(
