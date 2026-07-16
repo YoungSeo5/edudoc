@@ -21,7 +21,6 @@ def main() -> int:
         pipe = Pipeline(config=PipelineConfig(
             output_dir=out,
             write_files=True,
-            validate_gongmun=True,
             write_validation_report=True,
         ))
 
@@ -32,11 +31,12 @@ def main() -> int:
 
         md_path = out / f"{sample.stem}.md"
         model_path = out / f"{sample.stem}.document.json"
-        report_path = out / f"{sample.stem}.validation.txt"
+        report_path = out / f"{sample.stem}.document.validation.txt"
 
         assert md_path.exists(), "Markdown output file missing"
         assert model_path.exists(), "DocumentModel JSON file missing"
-        assert report_path.exists(), "validation report missing"
+        assert report_path.exists(), "DocumentModel validation report missing"
+        assert not (out / f"{sample.stem}.validation.txt").exists()
 
         model = json.loads(model_path.read_text(encoding="utf-8"))
         assert model["source_path"].endswith(sample.name)

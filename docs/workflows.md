@@ -41,6 +41,11 @@ The project may still convert HWPX/HWP/Markdown into normalized Markdown or
 DocumentModel(JSON), but that normalization is a foundation for understanding,
 generation, validation, and final rendering.
 
+The generic normalization command and public `Pipeline` do not dispatch
+document-type writing validators. Gongmun rules run only within the isolated
+dedicated Gongmun compatibility path; input extensions and target profiles never
+cause Gongmun fallback validation.
+
 ## Implemented Intake Foundation
 
 `core/source_bundle.py` provides the first small runtime layer for this workflow:

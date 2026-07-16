@@ -56,7 +56,9 @@ is not claimed or asserted (`tests/test_pdf_export_status.py`).
 - Therefore PDF is NOT a stabilized export. DOCX form/table quality must be acceptable before PDF rendering is prioritized.
 - The pipeline now flags non-DOCX exports with `stabilized: False` + `experimental: True` in `meta["exports"]`; the CLI reports them as `출력(fallback·실험적)`, not plain success.
 - Markdown conversion status is separate from export status: Markdown for real samples is currently more reliable than PDF export.
-- A Gongmun validation failure on a non-gongmun sample (e.g. missing `끝.`) is a validation result, not an export failure — do not conflate the two.
+- Generic conversion and the public Pipeline/CLI do not run Gongmun writing
+  validation. The isolated dedicated Gongmun flow remains separate from export
+  success or failure.
 
 ## Planned Exporters
 

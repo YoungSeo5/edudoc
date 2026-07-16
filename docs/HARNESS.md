@@ -4,9 +4,19 @@
 
 This harness prevents coding agents from drifting away from the HWPX-first MVP.
 
-## Current MVP
+## Current Validation Boundary
 
-HWPX input -> DocumentModel(JSON)/Markdown -> gongmun_rules validation -> validation report.
+The earlier Phase 0 harness used this flow:
+
+```text
+HWPX input -> DocumentModel(JSON)/Markdown -> gongmun_rules validation -> validation report
+```
+
+That is historical Phase 0 behavior, not a responsibility of the current public
+CLI or `Pipeline`. `main.py run` normalizes HWP/HWPX/Markdown without
+dispatching document-type writing validators. Gongmun rules remain isolated in
+the dedicated Gongmun compatibility flow; file extensions and target profiles
+do not select them in the public Pipeline.
 
 ## Agent Roles
 

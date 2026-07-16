@@ -19,14 +19,12 @@ from .exporters.pptx_exporter import PptxExporter
 from .input_filter import is_processable_input
 from .registry import ConverterRegistry, default_registry
 from validators.document_model_rules import validate as validate_document_model
-from validators.gongmun_rules import validate as validate_gongmun
 
 
 @dataclass
 class PipelineConfig:
     output_dir: Path = Path("exports")
     write_files: bool = True
-    validate_gongmun: bool = False
     write_validation_report: bool = False
     export_formats: tuple[str, ...] = ()
 
@@ -60,7 +58,6 @@ class Pipeline:
                 model_path = self._write_document_model(path, result.document_model)
                 result.meta["document_model"] = str(model_path)
 
-                # DocumentModel 무결성 검증(공문 문체 검증과 별개). 막지 않고 리포트만 한다.
                 dm_report = validate_document_model(result.document_model)
                 result.meta["document_model_validation"] = {
                     "available": True,
@@ -77,14 +74,6 @@ class Pipeline:
                     "available": False,
                     "reason": "converter did not provide document_model",
                 }
-
-            if self.config.validate_gongmun:
-                report = validate_gongmun(result.markdown)
-                result.meta["validation_passed"] = report.passed
-                result.meta["validation_summary"] = report.summary()
-                if self.config.write_validation_report:
-                    report_path = self._write_validation_report(path, report.summary())
-                    result.meta["validation_report"] = str(report_path)
 
             if self.config.export_formats:
                 result.meta["exports"] = self._export_outputs(out_path)
@@ -105,12 +94,6 @@ class Pipeline:
         out_path.write_text(markdown, encoding="utf-8")
         return out_path
 
-    def _write_validation_report(self, source: Path, summary: str) -> Path:
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = self.config.output_dir / (source.stem + ".validation.txt")
-        out_path.write_text(summary, encoding="utf-8")
-        return out_path
-
     def _write_document_model(self, source: Path, document_model) -> Path:  # noqa: ANN001
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         out_path = self.config.output_dir / (source.stem + ".document.json")
@@ -121,7 +104,6 @@ class Pipeline:
         return out_path
 
     def _write_document_model_report(self, source: Path, summary: str) -> Path:  # noqa: ANN001
-        # 공문 문체 리포트(.validation.txt)와 별개 파일로 저장한다.
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         out_path = self.config.output_dir / (source.stem + ".document.validation.txt")
         out_path.write_text(summary, encoding="utf-8")

@@ -5,6 +5,10 @@ edudoc Phase 0 진입점.
   python main.py run <파일_또는_폴더> [--export docx,pdf]
   python main.py watch [감시폴더] [--export docx,pdf]
 
+검증:
+  범용 run/watch는 문서 유형별 작성 규칙 검증을 실행하지 않습니다.
+  HWPX에서 DocumentModel이 생성되면 무결성 검사만 수행합니다.
+
 예:
   python main.py run samples/
   python main.py run samples/report.hwpx
@@ -46,9 +50,6 @@ def _print_result(r) -> None:  # noqa: ANN001
     if r.ok:
         out = r.meta.get("output", "(미저장)")
         line += f"  ->  {out}"
-        if "validation_passed" in r.meta:
-            state = "통과" if r.meta["validation_passed"] else "확인 필요"
-            line += f"  | 검수: {state}"
         if r.meta.get("exports"):
             exports = r.meta["exports"]
             stable = [e["format"] for e in exports if e.get("ok") and e.get("stabilized")]
@@ -93,15 +94,30 @@ def cmd_watch(folder: Path, pipeline: Pipeline) -> int:
 
 
 def main(argv: list[str]) -> int:
+    if any(argument in {"-h", "--help"} for argument in argv[1:]):
+        print(__doc__)
+        return 0
     if len(argv) < 2:
         print(__doc__)
         return 2
 
     command = argv[1]
     export_formats = _parse_export_formats(argv)
+    unsupported_option = next(
+        (
+            argument
+            for argument in argv[2:]
+            if argument.startswith("--")
+            and argument != "--export"
+            and not argument.startswith("--export=")
+        ),
+        None,
+    )
+    if unsupported_option is not None:
+        print(f"지원하지 않는 옵션: {unsupported_option}", file=sys.stderr)
+        return 2
     pipeline = Pipeline(config=PipelineConfig(
         output_dir=Path("exports"),
-        validate_gongmun=True,
         write_validation_report=True,
         export_formats=export_formats,
     ))

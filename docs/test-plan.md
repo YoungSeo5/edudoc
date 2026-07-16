@@ -10,9 +10,15 @@ source/reference materials + user intent
 -> final rendering
 ```
 
-The existing HWPX flow remains a foundation:
+The earlier Phase 0 HWPX harness used this flow:
 
 HWPX input -> DocumentModel(JSON)/Markdown -> gongmun_rules validation -> validation report.
+
+The current generic `main.py run` command and public `Pipeline` normalize inputs
+without dispatching a document-type writing validator. Tests expecting a
+Gongmun validation report must exercise the isolated dedicated Gongmun workflow.
+HWP/HWPX/Markdown extensions and target profiles never select Gongmun validation
+in the public Pipeline.
 
 Binary `.hwp` remains a legacy/fallback compatibility path. It is not the default MVP input for new harness checks.
 
@@ -105,7 +111,8 @@ Expected:
 
 ## Markdown Draft Workflow
 
-When the draft is generated from a user brief, use `skills/gongmun_writer/SKILL.md` as the generation guide before running validation.
+The generic Markdown workflow performs normalization only. The dedicated
+Gongmun compatibility workflow is tested separately below.
 
 Prepare a UTF-8 Markdown file with:
 - title heading
@@ -122,7 +129,8 @@ python main.py run samples/
 
 Expected:
 - Markdown is copied or normalized into `exports/`
-- validation report is created as `*.validation.txt`
+- no Gongmun `*.validation.txt` report is created by generic `main.py run`
+- Gongmun generation and validation are checked through the dedicated workflow below
 - DOCX/PDF export is not attempted unless explicitly requested
 - `samples/README.md`, `samples/AGENTS.md`, `samples/AGENT.md`, `CLAUDE.md`, `.gitkeep`, validation reports, document JSON, and generated Office outputs are skipped during directory runs
 - generated outputs are written to `exports/` or the configured output directory, not back into `samples/`
@@ -167,7 +175,8 @@ python main.py run samples/
 
 Expected:
 - HWPX input is converted to normalized Markdown and, later, DocumentModel(JSON)-compatible structure
-- validation report is created as `*.validation.txt`
+- when a DocumentModel is available, its integrity report may be written as
+  `*.document.validation.txt`; no Gongmun writing-validation report is produced
 - HWPX remains the first input path considered when adding new structure-preserving checks
 
 Focused smoke test:

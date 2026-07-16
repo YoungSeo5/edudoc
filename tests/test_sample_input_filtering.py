@@ -60,8 +60,6 @@ def test_directory_run_skips_sample_control_files_and_writes_only_to_output_dir(
         pipe = Pipeline(config=PipelineConfig(
             output_dir=out,
             write_files=True,
-            validate_gongmun=True,
-            write_validation_report=True,
             export_formats=("docx",),
         ))
 
@@ -70,7 +68,7 @@ def test_directory_run_skips_sample_control_files_and_writes_only_to_output_dir(
         assert [r.source.name for r in results] == ["actual_sample.md"]
         assert (out / "actual_sample.md").exists()
         assert (out / "actual_sample.docx").exists()
-        assert (out / "actual_sample.validation.txt").exists()
+        assert not (out / "actual_sample.validation.txt").exists()
 
         assert not (out / "README.md").exists()
         assert not (out / "README.docx").exists()

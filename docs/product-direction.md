@@ -63,7 +63,6 @@ Expected interpretation:
 edudoc should grow toward generating and validating task-oriented documents such
 as:
 
-- 공문
 - 공식 보고서
 - 활동보고서
 - 신청서 / 사업계획서
@@ -74,15 +73,18 @@ as:
 
 ## Examples
 
-### Gongmun
+### Gongmun Compatibility Path (Outside Active Public Scope)
 
 ```text
 User request:
 행사 안내 내용을 바탕으로 학교에 보낼 공문 초안을 만들어줘.
 
-System goal:
-source notes -> 공문 Markdown draft -> gongmun_rules validation -> final export if requested
+Compatibility flow:
+source notes -> 공문 Markdown draft -> gongmun_rules validation
 ```
+
+The Gongmun generator and validator remain as an isolated compatibility path.
+They are not selected or called by the current public CLI or `Pipeline`.
 
 ### Promotional Material
 
@@ -147,6 +149,12 @@ Keep these layers separate:
 6. Rendering/export
    render the validated draft to DOCX / HWPX / PDF / PPTX when needed
 ```
+
+Normalization and document-type writing validation are separate operations. The
+generic `main.py run` path and public `Pipeline` perform no document-type writing
+validation. The isolated Gongmun generator invokes `gongmun_rules` within its
+own compatibility flow. `.hwp`, `.hwpx`, and `.md` extensions and target-document
+profiles never cause the generic Pipeline to dispatch Gongmun rules.
 
 Export quality matters, but export is downstream of generation. DOCX table
 quality, PDF stability, and HWPX package quality are final-deliverable concerns,

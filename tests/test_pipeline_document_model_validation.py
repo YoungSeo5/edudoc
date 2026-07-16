@@ -1,8 +1,8 @@
 """Loop 8.96: DocumentModel integrity validation is wired into the pipeline.
 
 Proves that when a converter provides a DocumentModel (HWPX path), the pipeline
-runs `validators.document_model_rules` and reports the result separately from
-Gongmun writing validation, without changing existing outputs.
+runs `validators.document_model_rules` without dispatching a document-type
+writing validator.
 """
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ def test_pipeline_runs_document_model_validation() -> None:
         pipe = Pipeline(config=PipelineConfig(
             output_dir=out,
             write_files=True,
-            validate_gongmun=True,
             write_validation_report=True,
         ))
 
@@ -42,7 +41,7 @@ def test_pipeline_runs_document_model_validation() -> None:
         # existing outputs preserved
         assert (out / f"{sample.stem}.md").exists(), "Markdown output missing"
         assert (out / f"{sample.stem}.document.json").exists(), "DocumentModel JSON missing"
-        assert (out / f"{sample.stem}.validation.txt").exists(), "Gongmun report missing"
+        assert not (out / f"{sample.stem}.validation.txt").exists()
 
         # new, separate DocumentModel validation report
         assert (out / f"{sample.stem}.document.validation.txt").exists(), (
