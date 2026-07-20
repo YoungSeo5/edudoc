@@ -19,7 +19,7 @@ from docx.shared import Mm, Pt
 
 from .export_base import BaseExporter, ExportResult
 from .markdown_blocks import Heading, ListBlock, Paragraph, Run, Table, parse_markdown
-from .style_profile import DEFAULT_GONGMUN_STYLE_PROFILE, DocumentStyleProfile
+from .style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE, DocumentStyleProfile
 
 
 class DocxExporter(BaseExporter):
@@ -28,7 +28,7 @@ class DocxExporter(BaseExporter):
     supported_ext = (".docx",)
 
     def __init__(self, style_profile: DocumentStyleProfile | None = None) -> None:
-        self.style_profile = style_profile or DEFAULT_GONGMUN_STYLE_PROFILE
+        self.style_profile = style_profile or DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 
     def export(self, markdown_path: Path, output_path: Path) -> ExportResult:
         markdown_path = Path(markdown_path)
@@ -76,7 +76,7 @@ class DocxExporter(BaseExporter):
                     "blocks": len(blocks),
                     "requires_optional_tool": False,
                     "format": ".docx",
-                    "style_profile": "default_gongmun",
+                    "style_profile": self.style_profile.profile_id,
                     "docx_quality_level": "partially_stabilized",
                     **table_stats,
                     "note": (

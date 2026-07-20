@@ -7,8 +7,20 @@ from pathlib import Path
 from core.exporters.docx_exporter import DocxExporter
 from core.exporters.hwpx_via_hwpskill import HwpxViaHwpSkillExporter
 from core.exporters.pptx_exporter import PptxExporter
+from core.exporters.style_profile import (
+    DEFAULT_GONGMUN_STYLE_PROFILE,
+    DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE,
+    DocumentStyleProfile,
+)
 
-from .report import ComposedReport, validate_report
+from .report import ComposedReport, attachment_policy_for_family, validate_report
+
+# target document profile family -> DOCX style profile (unknown family => neutral)
+_FAMILY_STYLE_PROFILES = {"gongmun": DEFAULT_GONGMUN_STYLE_PROFILE}
+
+
+def _style_profile_for_family(family: str | None) -> DocumentStyleProfile:
+    return _FAMILY_STYLE_PROFILES.get(family or "", DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE)
 
 
 def load_plan(path: Path | str) -> ComposedReport:
@@ -22,6 +34,7 @@ def render_report_to_hwpx(
     *,
     template: str = "report",
     style_reference: Path | str | None = None,
+    profile_family: str | None = None,
 ):
     """Validate -> clean Markdown -> HWPX. Returns (problems, export_result).
 
@@ -35,7 +48,9 @@ def render_report_to_hwpx(
     markdown_path = Path(markdown_path)
     hwpx_path = Path(hwpx_path)
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown_path.write_text(report.to_markdown(), encoding="utf-8")
+    markdown_path.write_text(
+        report.to_markdown(attachment_policy_for_family(profile_family)), encoding="utf-8"
+    )
 
     custom_header: Path | None = None
     fallback_fields: list[str] | None = None
@@ -65,6 +80,7 @@ def render_report_to_pptx(
     pptx_path: Path | str,
     *,
     include_charts: bool = False,
+    profile_family: str | None = None,
 ):
     """Validate -> clean Markdown -> PPTX (pip-native). Returns (problems, export_result).
 
@@ -74,7 +90,9 @@ def render_report_to_pptx(
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown_path.write_text(report.to_markdown(), encoding="utf-8")
+    markdown_path.write_text(
+        report.to_markdown(attachment_policy_for_family(profile_family)), encoding="utf-8"
+    )
     export_result = PptxExporter(include_charts=include_charts).export(markdown_path, pptx_path)
     return problems, export_result
 
@@ -85,19 +103,24 @@ def render_report_to_docx(
     docx_path: Path | str,
     *,
     style_reference: Path | str | None = None,
+    profile_family: str | None = None,
 ):
     """Validate -> clean Markdown -> DOCX (pip-native). Returns (problems, export_result).
 
     When ``style_reference`` (an HWPX) is given, its real style is extracted and
     applied; fields the reference lacks fall back to the default and are recorded
     in ``export_result.meta['style_fallback_fields']`` (fallback_used honesty).
+    Otherwise the style profile is selected by ``profile_family`` (Gongmun only
+    on the "gongmun" family; every other family gets the neutral profile).
     """
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
     markdown_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown_path.write_text(report.to_markdown(), encoding="utf-8")
+    markdown_path.write_text(
+        report.to_markdown(attachment_policy_for_family(profile_family)), encoding="utf-8"
+    )
 
-    style_profile = None
+    style_profile = _style_profile_for_family(profile_family)
     fallback_fields: list[str] | None = None
     if style_reference is not None:
         from core.exporters.extracted_style_mapper import to_document_style_profile

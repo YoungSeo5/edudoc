@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from docx import Document
 
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 from core.pipeline import Pipeline, PipelineConfig
 
 
@@ -66,10 +66,10 @@ def test_pipeline_docx_export_uses_pip_native_exporter() -> None:
         for token in ("공문 테스트", "수신: 테스트 학교", "관련: 테스트 계획", "붙임", "끝."):
             assert token in visible_text, f"DOCX visible text missing: {token}"
 
-        # pipeline default path also applies the default style profile (one stable property)
+        # pipeline default path applies the neutral style profile (one stable property)
         assert abs(
             document.sections[0].top_margin.mm
-            - DEFAULT_GONGMUN_STYLE_PROFILE.page_margin_top_mm
+            - DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.page_margin_top_mm
         ) < 0.5
 
 

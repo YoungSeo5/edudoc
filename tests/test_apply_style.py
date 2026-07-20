@@ -16,7 +16,7 @@ from docx import Document
 
 from core.compose.render import render_report_to_docx
 from core.compose.report import ComposedReport
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 from core.exporters.extracted_style_mapper import to_document_style_profile
 from core.templates.models import ExtractedStyleProfile
 
@@ -42,8 +42,8 @@ def test_mapping_extracted_wins_no_fallback() -> None:
 def test_mapping_missing_values_fall_back_and_are_reported() -> None:
     profile, fallback = to_document_style_profile(ExtractedStyleProfile())
 
-    # missing font falls back to the default and is reported, not invented
-    assert profile.font_family == DEFAULT_GONGMUN_STYLE_PROFILE.font_family
+    # missing font falls back to the neutral default and is reported, not invented
+    assert profile.font_family == DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.font_family
     assert "font_family" in fallback
     assert "font_size_pt" in fallback
     assert "line_spacing" in fallback

@@ -33,7 +33,7 @@ def test_gongmun_docx_applies_style_profile() -> None:
         docx_path = tmp_path / "gongmun.docx"
         md_path.write_text(generated.markdown, encoding="utf-8")
 
-        result = DocxExporter().export(md_path, docx_path)
+        result = DocxExporter(style_profile=profile).export(md_path, docx_path)
         assert result.ok, result.error
         assert docx_path.exists(), "DOCX output missing"
         assert docx_path.stat().st_size > 0, "DOCX output is empty"

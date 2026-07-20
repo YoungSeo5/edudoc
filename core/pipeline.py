@@ -16,6 +16,7 @@ from .converter_base import ConvertResult
 from .exporters import HwpxExporter, OfficeExporter
 from .exporters.docx_exporter import DocxExporter
 from .exporters.pptx_exporter import PptxExporter
+from .exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 from .input_filter import is_processable_input
 from .registry import ConverterRegistry, default_registry
 from validators.document_model_rules import validate as validate_document_model
@@ -211,7 +212,8 @@ class Pipeline:
 
     def _select_exporter(self, ext: str):
         if ext.lower() == ".docx":
-            return DocxExporter()
+            # 공용 파이프라인은 문서 유형을 모르므로 중립 프로필을 명시한다.
+            return DocxExporter(style_profile=DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE)
         if ext.lower() == ".pptx":
             return PptxExporter()
         if ext.lower() == ".hwpx":

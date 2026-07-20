@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from core.document_model import document_model_from_markdown  # noqa: E402
 from core.document_plan import create_document_plan  # noqa: E402
 from core.exporters.docx_exporter import DocxExporter  # noqa: E402
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE  # noqa: E402
 from core.generators.public_plan_generator import generate_public_plan_markdown  # noqa: E402
 from core.renderers.hwp_skill_renderer import HwpSkillRenderer  # noqa: E402
 from core.registry import default_registry  # noqa: E402
@@ -126,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
     export_paths: list[Path] = []
     if "docx" in args.export:
         docx_path = out_dir / "public_plan.docx"
-        export_result = DocxExporter().export(markdown_path, docx_path)
+        export_result = DocxExporter(
+            style_profile=DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
+        ).export(markdown_path, docx_path)
         _write_json(out_dir / "public_plan.export.docx.json", {
             "ok": export_result.ok,
             "error": export_result.error,

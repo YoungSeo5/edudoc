@@ -12,7 +12,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 
 from core.exporters.docx_exporter import DocxExporter
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 
 
 REPORT_MD = """\
@@ -93,15 +93,15 @@ def test_docx_public_report_style_and_table_rendering() -> None:
         assert all(run.bold for run in heading1.runs if run.text)
 
         normal = document.styles["Normal"]
-        assert normal.font.name == DEFAULT_GONGMUN_STYLE_PROFILE.font_family
-        assert abs(normal.font.size.pt - DEFAULT_GONGMUN_STYLE_PROFILE.font_size_pt) < 0.1
+        assert normal.font.name == DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.font_family
+        assert abs(normal.font.size.pt - DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.font_size_pt) < 0.1
 
         assert len(document.tables) == 1
         table = document.tables[0]
         assert _table_has_fixed_layout(table)
         assert table.cell(0, 0).text == "구분"
         assert table.cell(0, 1).text == "주요 내용"
-        assert _cell_fill(table.cell(0, 0)) == DEFAULT_GONGMUN_STYLE_PROFILE.table_header_fill
+        assert _cell_fill(table.cell(0, 0)) == DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.table_header_fill
         assert all(run.bold for run in table.cell(0, 0).paragraphs[0].runs if run.text)
 
 

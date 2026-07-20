@@ -11,12 +11,12 @@ from dataclasses import replace
 
 from core.templates.models import ExtractedStyleProfile
 
-from .style_profile import DEFAULT_GONGMUN_STYLE_PROFILE, DocumentStyleProfile
+from .style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE, DocumentStyleProfile
 
 
 def to_document_style_profile(
     extracted: ExtractedStyleProfile,
-    base: DocumentStyleProfile = DEFAULT_GONGMUN_STYLE_PROFILE,
+    base: DocumentStyleProfile = DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE,
 ) -> tuple[DocumentStyleProfile, list[str]]:
     """Return (profile, fallback_fields).
 
@@ -46,7 +46,7 @@ def to_document_style_profile(
 
     take(_percent_to_multiple(extracted.line_spacing), "line_spacing")
 
-    return replace(base, **overrides), fallback
+    return replace(base, profile_id="extracted", **overrides), fallback
 
 
 def _percent_to_multiple(value: str | None) -> float | None:

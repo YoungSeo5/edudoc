@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from docx import Document
 
 from core.exporters.docx_exporter import DocxExporter
+from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
 from core.generators.gongmun_generator import generate_and_validate
 
 
@@ -26,7 +27,9 @@ def test_validated_gongmun_markdown_exports_to_docx() -> None:
         docx_path = tmp_path / "gongmun.generated.docx"
         markdown_path.write_text(generated.markdown, encoding="utf-8")
 
-        result = DocxExporter().export(markdown_path, docx_path)
+        result = DocxExporter(style_profile=DEFAULT_GONGMUN_STYLE_PROFILE).export(
+            markdown_path, docx_path
+        )
 
         assert result.ok, result.error
         assert docx_path.exists(), "DOCX output missing"

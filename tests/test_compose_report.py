@@ -13,7 +13,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.compose.report import Block, ComposedReport, Section, Table, validate_report
+from core.compose.report import (
+    Block,
+    ComposedReport,
+    Section,
+    Table,
+    attachment_policy_for_family,
+    validate_report,
+)
 
 
 def _sample() -> ComposedReport:
@@ -42,8 +49,21 @@ def test_sections_are_headings_not_tables() -> None:
     assert "| 개요 |" not in md and "| Ⅰ |" not in md
     # official markers present
     assert "□ 상위 항목" in md and "○ 하위 항목" in md and "― 세부" in md
-    # attachment + end mark
+    # attachments render neutrally: no Gongmun-only [붙임]/끝. tail on a general report
+    assert "[첨부] 1. 첨부 1부." in md
+    assert "[붙임]" not in md
+    assert "끝." not in md
+
+
+def test_gongmun_family_keeps_official_attachment_tail() -> None:
+    md = _sample().to_markdown(attachment_policy_for_family("gongmun"))
     assert "[붙임] 1. 첨부 1부.  끝." in md
+
+
+def test_unknown_family_falls_back_to_neutral_policy() -> None:
+    md = _sample().to_markdown(attachment_policy_for_family("press_release"))
+    assert "[첨부] 1. 첨부 1부." in md
+    assert "끝." not in md
 
 
 def test_validator_flags_placeholder_leftover() -> None:
@@ -78,6 +98,8 @@ def test_optional_hwpx_render_has_one_real_table() -> int:
 
 if __name__ == "__main__":
     test_sections_are_headings_not_tables()
+    test_gongmun_family_keeps_official_attachment_tail()
+    test_unknown_family_falls_back_to_neutral_policy()
     test_validator_flags_placeholder_leftover()
     test_clean_report_validates()
     test_optional_hwpx_render_has_one_real_table()

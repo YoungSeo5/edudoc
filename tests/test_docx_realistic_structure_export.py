@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from docx import Document
 
 from core.exporters.docx_exporter import DocxExporter
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 
 FIXTURE = (
     Path(__file__).resolve().parent
@@ -66,7 +66,7 @@ def test_docx_realistic_structure_export() -> None:
         # style profile still applied (pip-native, no external office tool)
         normal = document.styles["Normal"]
         assert normal.font.size is not None
-        assert abs(normal.font.size.pt - DEFAULT_GONGMUN_STYLE_PROFILE.font_size_pt) < 0.1
+        assert abs(normal.font.size.pt - DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.font_size_pt) < 0.1
 
 
 if __name__ == "__main__":

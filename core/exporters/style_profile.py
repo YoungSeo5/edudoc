@@ -6,7 +6,7 @@ a better baseline than raw Markdown-to-Word defaults.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 
@@ -30,9 +30,12 @@ class DocumentStyleProfile:
     table_header_fill: str = "D9EAF7"
     table_cell_margin_twips: int = 90
     body_first_line_indent_mm: float = 0.0
+    profile_id: str = "custom"
 
 
-DEFAULT_GONGMUN_STYLE_PROFILE = DocumentStyleProfile(
+# Neutral baseline for general documents: exporters that receive no explicit
+# profile must fall back to this, never to the Gongmun profile.
+DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE = DocumentStyleProfile(
     page_margin_top_mm=30.0,
     page_margin_bottom_mm=20.0,
     page_margin_left_mm=20.0,
@@ -43,6 +46,13 @@ DEFAULT_GONGMUN_STYLE_PROFILE = DocumentStyleProfile(
     line_spacing=1.15,
     paragraph_space_after_pt=6.0,
     heading_alignment="center",
+    profile_id="default_public_document",
+)
+
+# Gongmun paths must select this explicitly (profile family "gongmun"); it is
+# never an implicit default. Style values share the conservative baseline.
+DEFAULT_GONGMUN_STYLE_PROFILE = replace(
+    DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE, profile_id="default_gongmun"
 )
 
 

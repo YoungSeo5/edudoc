@@ -5,6 +5,26 @@ clean Markdown and validates it. Layout is owned here (sections -> headings, bod
 □/○/― paragraphs, tables only for real tabular data), so the agent supplies content
 only. No LLM API is called here — the writing is done by the agent in-session.
 """
-from .report import Block, ComposedReport, Section, Table, validate_report
+from .report import (
+    AttachmentPolicy,
+    Block,
+    ComposedReport,
+    GONGMUN_ATTACHMENT_POLICY,
+    NEUTRAL_ATTACHMENT_POLICY,
+    Section,
+    Table,
+    attachment_policy_for_family,
+    validate_report,
+)
 
-__all__ = ["Block", "ComposedReport", "Section", "Table", "validate_report"]
+__all__ = [
+    "AttachmentPolicy",
+    "Block",
+    "ComposedReport",
+    "GONGMUN_ATTACHMENT_POLICY",
+    "NEUTRAL_ATTACHMENT_POLICY",
+    "Section",
+    "Table",
+    "attachment_policy_for_family",
+    "validate_report",
+]

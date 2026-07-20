@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from docx import Document
 
-from core.exporters.style_profile import DEFAULT_GONGMUN_STYLE_PROFILE
+from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
 from core.pipeline import Pipeline, PipelineConfig
 from validators.gongmun_rules import validate
 
@@ -58,7 +58,7 @@ def test_validated_gongmun_markdown_exports_to_docx_with_metadata() -> None:
         assert "끝." in visible_text
         assert abs(
             document.sections[0].top_margin.mm
-            - DEFAULT_GONGMUN_STYLE_PROFILE.page_margin_top_mm
+            - DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE.page_margin_top_mm
         ) < 0.5
 
 

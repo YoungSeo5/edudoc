@@ -5,6 +5,8 @@ Design rules (fix past mistakes):
 - Body hierarchy uses official public-document markers □ / ○ / ― / ※ as paragraph text.
 - Markdown tables are emitted ONLY from explicit `Table` objects (real tabular data).
 - Unknown facts must be written as "확인 필요" by the agent; the validator flags leftovers.
+- Attachments render neutrally by default; the Gongmun-only [붙임]/끝. tail applies
+  only through an explicit AttachmentPolicy (profile family "gongmun").
 """
 from __future__ import annotations
 
@@ -16,6 +18,24 @@ _MARKERS = ("□", "○", "―", "※")
 _INDENT = {"□": "", "○": "  ", "―": "   ", "※": "     "}
 # placeholder strings that must never survive into a finished report
 _PLACEHOLDER_HINTS = ("헤드라인M", "휴면명조", "포인트(문단", "세부내용")
+
+
+@dataclass(frozen=True)
+class AttachmentPolicy:
+    """Per-document-type attachment rendering. Only Gongmun appends the 끝. marker."""
+    label: str
+    end_marker: str = ""
+
+
+NEUTRAL_ATTACHMENT_POLICY = AttachmentPolicy(label="첨부")
+GONGMUN_ATTACHMENT_POLICY = AttachmentPolicy(label="붙임", end_marker="  끝.")
+
+# target document profile family -> attachment policy (unknown family => neutral)
+_FAMILY_ATTACHMENT_POLICIES = {"gongmun": GONGMUN_ATTACHMENT_POLICY}
+
+
+def attachment_policy_for_family(family: str | None) -> AttachmentPolicy:
+    return _FAMILY_ATTACHMENT_POLICIES.get(family or "", NEUTRAL_ATTACHMENT_POLICY)
 
 
 @dataclass
@@ -71,7 +91,9 @@ class ComposedReport:
 
     # --- rendering ------------------------------------------------------
 
-    def to_markdown(self) -> str:
+    def to_markdown(
+        self, attachment_policy: AttachmentPolicy = NEUTRAL_ATTACHMENT_POLICY
+    ) -> str:
         lines: list[str] = [f"# {self.title}", ""]
 
         for label, value in self.meta:
@@ -96,8 +118,8 @@ class ComposedReport:
 
         if self.attachments:
             for i, att in enumerate(self.attachments, 1):
-                tail = "  끝." if i == len(self.attachments) else ""
-                lines.append(f"[붙임] {i}. {att}{tail}")
+                tail = attachment_policy.end_marker if i == len(self.attachments) else ""
+                lines.append(f"[{attachment_policy.label}] {i}. {att}{tail}")
                 lines.append("")
 
         return "\n".join(lines).rstrip() + "\n"
