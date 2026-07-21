@@ -22,7 +22,7 @@ FIXTURE = (
 )
 
 
-def test_hwpx_via_hwpskill_renders_valid_hwpx() -> int:
+def test_hwpx_via_hwpskill_renders_valid_hwpx() -> None:
     assert FIXTURE.exists(), f"fixture missing: {FIXTURE}"
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -33,7 +33,7 @@ def test_hwpx_via_hwpskill_renders_valid_hwpx() -> int:
 
         if result.meta.get("available") is False:
             print("SKIP: hwp-skill not present; HWPX adapter not exercised")
-            return 0
+            return
 
         assert result.ok, result.error
         assert out.exists() and out.stat().st_size > 0, "HWPX missing/empty"
@@ -51,8 +51,8 @@ def test_hwpx_via_hwpskill_renders_valid_hwpx() -> int:
         assert result.meta.get("validation", {}).get("passed") is True, result.meta.get("validation")
 
     print("PASS: HWPX via hwp-skill (tables + Korean preserved, structurally valid)")
-    return 0
+    return
 
 
 if __name__ == "__main__":
-    raise SystemExit(test_hwpx_via_hwpskill_renders_valid_hwpx())
+    test_hwpx_via_hwpskill_renders_valid_hwpx()

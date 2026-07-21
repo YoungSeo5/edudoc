@@ -28,11 +28,11 @@ from core.adapters.hwpx_template_renderer import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-FSS_DIR = ROOT / "skills" / "templates" / "금융감독원" / "금감원 원장보고 가상자산"
+FSS_DIR = ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원장보고 가상자산"
 REGISTERED_FSS_DIRS = (
-    ROOT / "skills" / "templates" / "금융감독원" / "금감원 원장보고",
+    ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원장보고",
     FSS_DIR,
-    ROOT / "skills" / "templates" / "금융감독원" / "금감원 원페이지",
+    ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원페이지",
 )
 BROTHER_HWPX = ROOT / "references" / "document-types" / "public-plan" / "브라더 공공기관 보고서 양식.hwpx"
 

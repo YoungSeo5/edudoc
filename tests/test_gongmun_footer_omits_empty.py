@@ -62,32 +62,32 @@ def _check(build_section, base_meta: dict) -> None:
     assert "전화 02-000-0000" in joined2, joined2
 
 
-def test_gonmun_footer_omits_empty_fields() -> int:
+def test_gonmun_footer_omits_empty_fields() -> None:
     mod = _load("gonmun")
     if mod is None:
         print("SKIP: hwp-skill gonmun.py not present")
-        return 0
+        return
     _check(mod.build_section, {
         "기관명": "테스트기관", "수신": "수신자", "제목": "테스트",
         "발신명의": "테스트기관장", "기안자": "홍길동", "검토자": "김철수", "결재권자": "이영희",
         "body": ["안내합니다."],
     })
     print("PASS: gonmun footer omits empty fields")
-    return 0
+    return
 
 
-def test_gyeonggi_gonmun_footer_omits_empty_fields() -> int:
+def test_gyeonggi_gonmun_footer_omits_empty_fields() -> None:
     mod = _load("gyeonggi_gonmun")
     if mod is None:
         print("SKIP: hwp-skill gyeonggi_gonmun.py not present")
-        return 0
+        return
     _check(mod.build_section, {
         "기관명": "테스트기관", "수신": "수신자", "제목": "테스트",
         "발신명의": "테스트기관장", "기안자": "홍길동", "검토자": "김철수", "결재권자": "이영희",
         "본문": ["안내합니다."],
     })
     print("PASS: gyeonggi_gonmun footer omits empty fields")
-    return 0
+    return
 
 
 if __name__ == "__main__":

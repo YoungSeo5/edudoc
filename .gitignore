@@ -22,7 +22,6 @@ tools/hwp2hwpx-python-refactor/
 
 # scratch/experiments (not part of the project)
 sandbox/
-generate.py
 
 # omo agent-workflow plugin state (plans/drafts/evidence) — local tool state
 .omo/
@@ -39,4 +38,4 @@ generate.py
 *.pdf
 !references/**
 !samples/**
-!skills/templates/**
+!templates/institutions/**

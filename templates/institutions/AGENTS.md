@@ -1,4 +1,4 @@
-# skills/templates/AGENTS.md
+# templates/institutions/AGENTS.md
 
 Institution templates live here as `<institution>/<document_type>/`.
 
@@ -9,7 +9,7 @@ edit, approve, or render a template. This file states only the invariants.
 
 - **Loading**: the registry (`core.templates.registry.TemplateRegistry`) loads a
   `template.json` only when `status: approved` **and** it sits at
-  `skills/templates/<institution>/<document_type>/template.json`.
+  `templates/institutions/<institution>/<document_type>/template.json`.
 - **Approval is a human gate**: extraction code only writes a `candidate`. A
   person promotes it to `approved`; code never claims officialness on its own.
 - **Rendering needs a complete base**: `raw/` is intentionally incomplete (no

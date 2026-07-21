@@ -14,11 +14,9 @@ The following directories are read-only by default:
 
 Do not edit, delete, rename, move, or refactor these directories unless the user explicitly asks for that exact change.
 
-`skills/templates/` is NOT protected — it holds edudoc-owned institution template
-artifacts (`<institution>/<document_type>/template.json`) and is freely editable.
-Only explicitly approved `template.json` files are loadable by the runtime.
-Candidate, review, evidence, success-rule, and false-positive-rule files may live
-beside an approved template.
+Institution templates are not AI skills and no longer live in this folder. They
+are edudoc-owned data under `templates/institutions/`; read that directory's
+`AGENTS.md` and `README.md` before editing or approving one.
 
 ## Rule
 

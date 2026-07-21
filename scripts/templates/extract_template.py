@@ -16,9 +16,9 @@ from core.templates.quality.false_positive import load_false_positive_rules  # n
 from core.templates.quality.success_rules import load_success_rules  # noqa: E402
 from core.templates.serialization import write_pipeline_artifacts  # noqa: E402
 
-DEFAULT_SUCCESS_RULES = ROOT / "templates" / "template-quality" / "success-rules.json"
+DEFAULT_SUCCESS_RULES = ROOT / "templates" / "quality" / "success-rules.json"
 DEFAULT_FALSE_POSITIVE_RULES = (
-    ROOT / "templates" / "template-quality" / "false-positive-rules.json"
+    ROOT / "templates" / "quality" / "false-positive-rules.json"
 )
 
 

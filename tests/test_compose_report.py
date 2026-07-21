@@ -79,7 +79,7 @@ def test_clean_report_validates() -> None:
     assert validate_report(_sample()) == []
 
 
-def test_optional_hwpx_render_has_one_real_table() -> int:
+def test_optional_hwpx_render_has_one_real_table() -> None:
     from core.compose.render import render_report_to_hwpx
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -89,11 +89,11 @@ def test_optional_hwpx_render_has_one_real_table() -> int:
         assert problems == []
         if result.meta.get("available") is False:
             print("SKIP: hwp-skill not present; HWPX render not exercised")
-            return 0
+            return
         assert result.ok, result.error
         section = zipfile.ZipFile(out).read("Contents/section0.xml").decode("utf-8")
         assert len(re.findall(r"<hp:tbl", section)) == 1, "expected exactly one real table"
-    return 0
+    return
 
 
 if __name__ == "__main__":

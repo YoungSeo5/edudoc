@@ -1,3 +1,7 @@
+# Historical record ? not current instructions
+
+This file preserves past decisions and work history. It does not override current code, tests, `AGENTS.md`, or durable documentation.
+
 # MEMORY.md
 
 ### 2026-07-07 - Public-plan DocumentPlan to hwp-skill HWPX bridge added
@@ -65,7 +69,7 @@
 ### 2026-07-06 - TargetDocumentProfile layer added from protected HWPX skill
 
 - Added `core/target_document_profiles.py` as edudoc-owned document-type
-  metadata derived from protected `skills/hwpx-skill-main` references.
+  metadata derived from protected `skills/hwp-skill` references.
 - Initial profiles: `standard_gongmun`, `government_press_release`, and
   `public_institution_plan`.
 - Profiles define required fields, source-profile facts, required sections,
@@ -77,7 +81,7 @@
 
 ### 2026-07-06 - Safe hwpx-skill HWP intake adapter added
 
-- Added an edudoc-owned adapter around the protected `skills/hwpx-skill-main`
+- Added an edudoc-owned adapter around the protected `skills/hwp-skill`
   HWP -> HWPX flow.
 - The adapter uses an already installed `hwp2hwpx` package or an explicitly
   local `hwp2hwpx-python-refactor` checkout; it does not auto-install packages

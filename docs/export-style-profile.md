@@ -6,7 +6,7 @@ Loop 8.5 introduced a reusable **Gongmun export style profile** applied to DOCX 
 
 - A small, deterministic style layer: `core/exporters/style_profile.py`.
 - `DocumentStyleProfile` (frozen dataclass) + `DEFAULT_GONGMUN_STYLE_PROFILE`.
-- Documented as project defaults in `templates/gongmun/gyeonggi_style_profile.toml`
+- Documented as project defaults in `templates/render/gongmun/gyeonggi_style_profile.toml`
   (loadable via `load_from_toml()` using the standard-library `tomllib`; no new dependency).
 
 ## Applied DOCX properties
@@ -35,7 +35,7 @@ Markdown parsing and block-to-Word conversion behavior are unchanged.
 
 ## TOML profile status
 
-The TOML profile (`templates/gongmun/gyeonggi_style_profile.toml`) is loadable/reference
+The TOML profile (`templates/render/gongmun/gyeonggi_style_profile.toml`) is loadable/reference
 documentation. The default runtime path currently uses `DEFAULT_GONGMUN_STYLE_PROFILE`
 (the Python constant); the pipeline does **not** read the TOML automatically. Automatic,
 user-selectable style-profile loading is not implemented yet.

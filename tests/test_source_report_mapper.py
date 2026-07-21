@@ -16,7 +16,7 @@ from core.adapters.hwpx_template_renderer import fill_template_sections
 from core.generators.source_report_mapper import map_source_to_template_fields
 
 ROOT = Path(__file__).resolve().parent.parent
-FSS_DIR = ROOT / "skills" / "templates" / "금융감독원" / "금감원 원장보고 가상자산"
+FSS_DIR = ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원장보고 가상자산"
 PLACEHOLDER_MAP = FSS_DIR / "placeholder_map.json"
 
 SOURCE = """# 가상자산 이상거래 관련 현황 점검 진행상황

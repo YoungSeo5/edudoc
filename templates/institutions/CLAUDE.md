@@ -1,4 +1,4 @@
-# skills/templates/CLAUDE.md
+# templates/institutions/CLAUDE.md
 
 Before you add, edit, approve, or render an institution template in this
 directory, read `README.md` (folder layout) and `AGENTS.md` (load/render/approval

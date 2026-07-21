@@ -4,7 +4,7 @@ This directory stores edudoc-owned institution templates, keyed by
 `<institution>/<document_type>` (the same names the registry looks up).
 
 ```text
-skills/templates/<institution>/<document_type>/
+templates/institutions/<institution>/<document_type>/
 ├─ template.json          # the template contract; loadable only when status: approved
 ├─ template.review.md     # human-readable review of the separation result
 ├─ content.sample.json    # sample field values captured from the reference

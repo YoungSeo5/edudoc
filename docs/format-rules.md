@@ -8,7 +8,7 @@ Format-specific logic should stay outside input converters unless it is required
 Markdown is the current human-readable normalized format.
 For the MVP, HWPX is the default source input and Markdown is one normalized output of that source.
 
-Expected Gongmun structure for the dedicated compatibility workflow:
+Expected Gongmun structure for the dedicated Gongmun generation workflow:
 - one clear title heading
 - body text organized by headings or paragraphs
 - `관련` section when a source document or basis is needed

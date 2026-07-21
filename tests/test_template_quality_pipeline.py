@@ -23,6 +23,15 @@ from core.templates.registry import TemplateRegistry
 from core.templates.serialization import write_pipeline_artifacts
 
 
+def test_registry_defaults_to_institution_template_directory() -> None:
+    # Given: the registry is created without a custom root.
+    # When: its configured root is inspected.
+    registry = TemplateRegistry()
+
+    # Then: it targets the canonical institution-template directory.
+    assert registry.root == Path("templates/institutions")
+
+
 def _reference(path: Path) -> Path:
     section = (
         '<?xml version="1.0"?>'

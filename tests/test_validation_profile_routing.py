@@ -77,7 +77,7 @@ def test_pipeline_config_rejects_removed_gongmun_routing(legacy_config) -> None:
 
 def test_fss_template_path_never_uses_gongmun_as_fallback_validator() -> None:
     root = Path(__file__).resolve().parent.parent
-    template_dir = root / "skills" / "templates" / "금융감독원" / "금감원 원페이지"
+    template_dir = root / "templates" / "institutions" / "금융감독원" / "금감원 원페이지"
 
     with patch("validators.gongmun_rules.validate") as validator:
         sections, result = fill_template_sections(

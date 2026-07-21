@@ -46,7 +46,7 @@ def test_default_profile_has_sane_values() -> None:
 def test_load_from_toml_matches_default() -> None:
     toml_path = (
         Path(__file__).resolve().parent.parent
-        / "templates" / "gongmun" / "gyeonggi_style_profile.toml"
+        / "templates" / "render" / "gongmun" / "gyeonggi_style_profile.toml"
     )
     assert toml_path.exists(), f"style profile TOML missing: {toml_path}"
     # stdlib tomllib only; no external dependency.

@@ -10,10 +10,6 @@ source/reference materials + user intent
 -> final rendering
 ```
 
-The earlier Phase 0 HWPX harness used this flow:
-
-HWPX input -> DocumentModel(JSON)/Markdown -> gongmun_rules validation -> validation report.
-
 The current generic `main.py run` command and public `Pipeline` normalize inputs
 without dispatching a document-type writing validator. Tests expecting a
 Gongmun validation report must exercise the isolated dedicated Gongmun workflow.

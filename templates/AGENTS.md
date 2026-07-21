@@ -3,16 +3,16 @@
 `templates/` stores reusable OUTPUT render templates, style profiles, and layout
 assets used by exporters, plus project-wide template-quality rule defaults.
 
-Do not confuse the three "template" locations:
+Keep these template responsibilities distinct:
 
-- `templates/` (this folder) — output render/style/layout assets.
+- `templates/render/` — output render/style/layout assets.
 - `core/templates/` — deterministic code that extracts template candidates and
   style profiles from reference documents.
-- `skills/templates/<institution>/<document_type>/` — stored institution template
+- `templates/institutions/<institution>/<document_type>/` — stored institution template
   artifacts (`template.json`) that the generation flow loads and fills.
-- `templates/template-quality/` — global success-rule and false-positive-rule
+- `templates/quality/` — global success-rule and false-positive-rule
   defaults. Institution-specific rule memory belongs beside the institution
-  template under `skills/templates/`.
+  template under `templates/institutions/`.
 
 ## Responsibility
 

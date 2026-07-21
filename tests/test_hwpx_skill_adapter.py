@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import core.adapters.hwpx_skill_adapter as adapter_module
 from core.adapters.hwpx_skill_adapter import (
     HwpToHwpxAdapterError,
     convert_hwp_to_hwpx,
@@ -55,7 +56,9 @@ def test_adapter_uses_local_hwp2hwpx_without_install_or_clone() -> None:
     sys.modules.pop("hwp2hwpx", None)
 
 
-def test_adapter_returns_clear_error_when_engine_is_missing() -> None:
+def test_adapter_returns_clear_error_when_engine_is_missing(monkeypatch) -> None:
+    monkeypatch.delitem(sys.modules, "hwp2hwpx", raising=False)
+    monkeypatch.setattr(adapter_module, "_candidate_engine_paths", lambda *_: ())
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         skill_dir = root / "hwpx-skill-main"
@@ -163,7 +166,6 @@ def test_hwp_converter_prefers_hwp_to_hwpx_adapter_path() -> None:
 
 if __name__ == "__main__":
     test_adapter_uses_local_hwp2hwpx_without_install_or_clone()
-    test_adapter_returns_clear_error_when_engine_is_missing()
     test_adapter_accepts_engine_without_return_value()
     test_hwp_converter_keeps_pyhwp_fallback_when_adapter_unavailable()
     test_hwp_converter_prefers_hwp_to_hwpx_adapter_path()

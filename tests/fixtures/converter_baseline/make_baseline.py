@@ -21,7 +21,7 @@ from core.hwp_converter import HwpSkillConverter  # noqa: E402
 # Both inputs are tracked in this repository. Template assets are read only.
 SOURCES = {
     "sample_business_plan": "samples/참가신청서 및 사업계획서 양식_기창 (1).hwpx",
-    "fss_one_page_source": "skills/templates/금융감독원/금감원 원페이지/source.hwpx",
+    "fss_one_page_source": "templates/institutions/금융감독원/금감원 원페이지/source.hwpx",
 }
 
 OUT_DIR = Path(__file__).resolve().parent
