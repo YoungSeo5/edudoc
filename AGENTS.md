@@ -39,6 +39,16 @@ Project-level contract for Codex, Claude, and other coding agents. Keep this fil
 - Scope changes to the request. Preserve user working-tree changes. Do not delete files without explicit approval unless this request explicitly names the file and the removal is verified safe.
 - At completion, submit the exact validation commands, their results (including failures/warnings), and source/test evidence for behavior claims. Run focused tests first, then the requested full test command; do not hide failures or warnings.
 
+## Documentation Changes
+
+Before creating, moving, renaming, splitting, consolidating, shortening, archiving, or deleting documentation, read and follow:
+
+- [Documentation Migration Safety](docs/agent-policies/documentation-migration-safety.md)
+
+This policy is mandatory for all documentation changes.
+
+If the referenced policy file does not exist or cannot be read, stop the documentation task and report the missing policy. Do not modify any documentation until the policy is available.
+
 ## Commands
 
 ```bash
