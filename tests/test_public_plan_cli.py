@@ -6,8 +6,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import scripts.public_plan.generate_from_samples as generate_from_samples_module  # noqa: E402
 from scripts.public_plan.generate_from_samples import main  # noqa: E402
 
 
@@ -166,13 +169,73 @@ def test_public_plan_cli_reports_when_no_sources_convert() -> None:
         root = Path(tmp)
         samples = root / "samples"
         out_dir = root / "out"
+        failures_dir = root / "failures"
         samples.mkdir()
         (samples / "raw.csv").write_text("a,b\n1,2\n", encoding="utf-8")
 
-        exit_code = main([str(samples), "--out", str(out_dir)])
+        exit_code = main(
+            [str(samples), "--out", str(out_dir)], failures_dir=failures_dir
+        )
 
         assert exit_code == 2
-        assert (out_dir / "public_plan.failures.json").exists()
+        assert not (out_dir / "public_plan.failures.json").exists()
+        records = list(failures_dir.glob("*.json"))
+        assert len(records) == 1
+        record = json.loads(records[0].read_text(encoding="utf-8"))
+        assert record["entry_point"] == "public_plan_cli"
+        assert record["stage"] == "convert"
+        assert record["meta"]["bundle_summary"]["unsupported_count"] == 1
+
+
+def test_public_plan_cli_export_failure_writes_failure_record(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from core.exporters.export_base import ExportResult
+
+    class _FailingDocxExporter:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def export(self, markdown_path: Path, output_path: Path) -> ExportResult:
+            return ExportResult(
+                source=markdown_path,
+                output=output_path,
+                ok=False,
+                error="simulated export failure",
+                meta={"exporter": "DocxExporter"},
+            )
+
+    monkeypatch.setattr(generate_from_samples_module, "DocxExporter", _FailingDocxExporter)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        samples = root / "samples"
+        out_dir = root / "out"
+        repo_root = root / "repo"
+        failures_dir = root / "failures"
+        reference_dir = repo_root / "references" / "document-types" / "public-plan" / "samples"
+        samples.mkdir()
+        reference_dir.mkdir(parents=True)
+        (samples / "ai_plan.md").write_text(SAMPLE_MARKDOWN, encoding="utf-8")
+        (reference_dir / "public_plan_reference.pdf").write_bytes(b"%PDF-1.7\n")
+
+        exit_code = main(
+            [
+                str(samples), "--out", str(out_dir), "--repo-root", str(repo_root),
+                "--export", "docx",
+            ],
+            failures_dir=failures_dir,
+        )
+
+        assert exit_code == 1
+        assert not (out_dir / "public_plan.export.docx.json").exists()
+        records = list(failures_dir.glob("*.json"))
+        assert len(records) == 1
+        record = json.loads(records[0].read_text(encoding="utf-8"))
+        assert record["entry_point"] == "public_plan_cli"
+        assert record["stage"] == "export"
+        assert record["error"] == "simulated export failure"
+        assert record["meta"]["format"] == "docx"
 
 
 if __name__ == "__main__":

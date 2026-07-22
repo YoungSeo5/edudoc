@@ -14,6 +14,7 @@ from core.document_model import document_model_from_markdown  # noqa: E402
 from core.document_plan import create_document_plan  # noqa: E402
 from core.exporters.docx_exporter import DocxExporter  # noqa: E402
 from core.exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE  # noqa: E402
+from core.failure_log import DEFAULT_FAILURES_DIR, FailureRecord, record_failure  # noqa: E402
 from core.generators.public_plan_generator import generate_public_plan_markdown  # noqa: E402
 from core.renderers.hwp_skill_renderer import HwpSkillRenderer  # noqa: E402
 from core.registry import default_registry  # noqa: E402
@@ -21,7 +22,7 @@ from core.source_bundle import build_source_bundle  # noqa: E402
 from core.source_profile import build_source_profile_from_document_models  # noqa: E402
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Generate a public-institution plan Markdown draft from source samples."
@@ -57,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional final export format. Supports docx and public-plan hwpx.",
     )
     args = parser.parse_args(argv)
+    failures_dir = DEFAULT_FAILURES_DIR if failures_dir is None else failures_dir
 
     out_dir = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -100,11 +102,32 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     if not models:
-        _write_json(out_dir / "public_plan.failures.json", {
-            "failures": failures,
-            "bundle": bundle.to_dict(),
-        })
+        for failure in failures:
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="public_plan_cli",
+                    stage="convert",
+                    source=failure["path"],
+                    error=failure["error"],
+                ),
+            )
+        if not failures:
+            # every input was filtered out before conversion was attempted
+            # (e.g. an unsupported file type) -- record that explicitly so
+            # "no models" is never silent.
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="public_plan_cli",
+                    stage="convert",
+                    source=", ".join(str(path) for path in args.paths),
+                    error="no processable source documents found",
+                    meta={"bundle_summary": dict(bundle.summary)},
+                ),
+            )
         print("ERROR: no source documents could be converted", file=sys.stderr)
+        print(f"conversion_failures: {failures_dir}")
         return 2
 
     source_profile = build_source_profile_from_document_models(models)
@@ -130,13 +153,24 @@ def main(argv: list[str] | None = None) -> int:
         export_result = DocxExporter(
             style_profile=DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
         ).export(markdown_path, docx_path)
-        _write_json(out_dir / "public_plan.export.docx.json", {
-            "ok": export_result.ok,
-            "error": export_result.error,
-            "meta": export_result.meta,
-            "output": str(export_result.output),
-        })
-        if not export_result.ok:
+        if export_result.ok:
+            _write_json(out_dir / "public_plan.export.docx.json", {
+                "ok": export_result.ok,
+                "error": export_result.error,
+                "meta": export_result.meta,
+                "output": str(export_result.output),
+            })
+        else:
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="public_plan_cli",
+                    stage="export",
+                    source=str(docx_path),
+                    error=export_result.error or "export failed",
+                    meta={"exporter": export_result.meta.get("exporter"), "format": "docx"},
+                ),
+            )
             print(f"ERROR: DOCX export failed: {export_result.error}", file=sys.stderr)
             return 1
         export_paths.append(docx_path)
@@ -150,13 +184,24 @@ def main(argv: list[str] | None = None) -> int:
             include_title_page=True,
             include_table_of_contents=True,
         )
-        _write_json(out_dir / "public_plan.export.hwpx.json", {
-            "ok": render_result.ok,
-            "error": render_result.error,
-            "meta": render_result.meta,
-            "output": str(render_result.output),
-        })
-        if not render_result.ok:
+        if render_result.ok:
+            _write_json(out_dir / "public_plan.export.hwpx.json", {
+                "ok": render_result.ok,
+                "error": render_result.error,
+                "meta": render_result.meta,
+                "output": str(render_result.output),
+            })
+        else:
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="public_plan_cli",
+                    stage="export",
+                    source=str(hwpx_path),
+                    error=render_result.error or "export failed",
+                    meta={"exporter": render_result.meta.get("engine"), "format": "hwpx"},
+                ),
+            )
             print(f"ERROR: HWPX render failed: {render_result.error}", file=sys.stderr)
             return 1
         export_paths.append(hwpx_path)
@@ -167,9 +212,17 @@ def main(argv: list[str] | None = None) -> int:
     for path in export_paths:
         print(f"export: {path}")
     if failures:
-        failure_path = out_dir / "public_plan.failures.json"
-        _write_json(failure_path, {"failures": failures})
-        print(f"conversion_failures: {failure_path}")
+        for failure in failures:
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="public_plan_cli",
+                    stage="convert",
+                    source=failure["path"],
+                    error=failure["error"],
+                ),
+            )
+        print(f"conversion_failures: {failures_dir}")
     return 0
 
 

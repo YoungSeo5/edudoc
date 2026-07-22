@@ -9,10 +9,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.failure_log import DEFAULT_FAILURES_DIR, FailureRecord, record_failure  # noqa: E402
 from core.generators.gongmun_generator import generate_and_validate  # noqa: E402
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Generate Gongmun Markdown from a structured brief.",
     )
@@ -31,6 +32,7 @@ def main(argv: list[str] | None = None) -> int:
 
     brief_path = args.brief
     out_dir = args.out
+    failures_dir = DEFAULT_FAILURES_DIR if failures_dir is None else failures_dir
 
     try:
         result = generate_and_validate(brief_path)
@@ -42,6 +44,15 @@ def main(argv: list[str] | None = None) -> int:
         generated_path.write_text(result.markdown, encoding="utf-8")
         report_path.write_text(result.validation_report.summary(), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001
+        record_failure(
+            failures_dir,
+            FailureRecord(
+                entry_point="gongmun_cli",
+                stage="gongmun_generate",
+                source=str(brief_path),
+                error=repr(exc),
+            ),
+        )
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
@@ -50,6 +61,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"validation_passed: {result.passed}")
 
     if not result.passed:
+        record_failure(
+            failures_dir,
+            FailureRecord(
+                entry_point="gongmun_cli",
+                stage="gongmun_validate",
+                source=str(brief_path),
+                error=result.validation_report.summary(),
+            ),
+        )
         return 1
     return 0
 

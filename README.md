@@ -13,6 +13,8 @@ edudoc generates new documents from reference material and an explicit document 
 
 `main.py` accepts Markdown (`.md`, `.markdown`) and HWP/HWPX (`.hwp`, `.hwpx`). HWPX is the preferred structured input; HWP is a legacy fallback. Input or output extension never determines document type or Gongmun policy.
 
+All four entry points above write one JSON file per failure to `exports/failures/` (see `exports/AGENTS.md`) — diagnostic/operational data only, never implementation evidence.
+
 ## Export status at current code
 
 | Format | Route | Status | Scope caveat |

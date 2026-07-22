@@ -17,6 +17,7 @@ from .exporters import HwpxExporter, OfficeExporter
 from .exporters.docx_exporter import DocxExporter
 from .exporters.pptx_exporter import PptxExporter
 from .exporters.style_profile import DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE
+from .failure_log import DEFAULT_FAILURES_DIR, FailureRecord, record_failure
 from .input_filter import is_processable_input
 from .registry import ConverterRegistry, default_registry
 from validators.document_model_rules import validate as validate_document_model
@@ -28,6 +29,7 @@ class PipelineConfig:
     write_files: bool = True
     write_validation_report: bool = False
     export_formats: tuple[str, ...] = ()
+    failures_dir: Path = DEFAULT_FAILURES_DIR
 
 
 class Pipeline:
@@ -43,13 +45,19 @@ class Pipeline:
         path = Path(path)
         converter = self.registry.find(path)
         if converter is None:
-            return ConvertResult(
-                source=path, markdown="", ok=False,
-                error=f"지원하지 않는 확장자: {path.suffix} "
-                      f"(지원: {sorted(self.registry.supported_ext)})",
+            error = (
+                f"지원하지 않는 확장자: {path.suffix} "
+                f"(지원: {sorted(self.registry.supported_ext)})"
             )
+            self._record_failure("convert", str(path), error)
+            return ConvertResult(source=path, markdown="", ok=False, error=error)
 
         result = converter.convert(path)
+        if not result.ok:
+            self._record_failure(
+                "convert", str(path), result.error or "conversion failed",
+                meta={"converter": result.meta.get("converter")},
+            )
 
         if result.ok and self.config.write_files:
             out_path = self._write_markdown(path, result.markdown)
@@ -141,8 +149,29 @@ class Pipeline:
             ):
                 if key in export_result.meta:
                     entry[key] = export_result.meta[key]
+            if not export_result.ok:
+                self._record_failure(
+                    "export",
+                    str(output_path),
+                    export_result.error or "export failed",
+                    meta={"exporter": exporter_name, "format": ext},
+                )
             exports.append(entry)
         return exports
+
+    def _record_failure(
+        self, stage: str, source: str, error: str, *, meta: dict | None = None
+    ) -> None:
+        record_failure(
+            self.config.failures_dir,
+            FailureRecord(
+                entry_point="pipeline",
+                stage=stage,
+                source=source,
+                error=error,
+                meta=meta or {},
+            ),
+        )
 
     def _export_status(self, export_result, output_path: Path) -> dict:  # noqa: ANN001
         exporter_name = export_result.meta.get("exporter")

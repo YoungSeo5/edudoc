@@ -33,6 +33,7 @@ from core.compose.render import (  # noqa: E402
     render_report_to_hwpx,
     render_report_to_pptx,
 )
+from core.failure_log import DEFAULT_FAILURES_DIR, FailureRecord, record_failure  # noqa: E402
 
 _RENDERERS = {
     "docx": render_report_to_docx,
@@ -49,7 +50,7 @@ def _parse_formats(value: str) -> list[str]:
     return formats
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--plan", required=True, type=Path, help="에이전트가 작성한 plan.json")
     parser.add_argument("--to", default="docx", help="쉼표로 구분한 출력 형식 (docx,hwpx,pptx)")
@@ -61,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--document-type", help="승인된 HWPX 기관 템플릿의 문서 유형")
     parser.add_argument("--template-content", type=Path, help="기관 템플릿 content.json 경로")
     args = parser.parse_args(argv)
+    failures_dir = DEFAULT_FAILURES_DIR if failures_dir is None else failures_dir
 
     if not args.plan.is_file():
         raise SystemExit(f"ERROR: plan 파일 없음: {args.plan}")
@@ -109,6 +111,17 @@ def main(argv: list[str] | None = None) -> int:
             "error": result.error,
             "stabilized": result.meta.get("stabilized"),
         })
+        if not result.ok:
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="compose_cli",
+                    stage="render",
+                    source=str(out_path),
+                    error=result.error or "render failed",
+                    meta={"format": fmt},
+                ),
+            )
 
     summary = {
         "title": report.title,

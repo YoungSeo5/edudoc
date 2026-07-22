@@ -207,6 +207,37 @@ def test_render_plan_cli_rejects_unreadable_template_content_file(
     assert str(content_path) in error
 
 
+def test_render_plan_cli_writes_a_render_failure_record(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan = _write_plan(tmp_path)
+    failures_dir = tmp_path / "failures"
+
+    def fake_failing_renderer(report, markdown_path, output_path, **kwargs):
+        return [], ExportResult(
+            source=Path(markdown_path),
+            output=Path(output_path),
+            ok=False,
+            error="simulated render failure",
+        )
+
+    monkeypatch.setitem(render_plan._RENDERERS, "docx", fake_failing_renderer)
+
+    exit_code = render_plan.main(
+        ["--plan", str(plan), "--to", "docx", "--out", str(tmp_path)],
+        failures_dir=failures_dir,
+    )
+
+    assert exit_code == 1
+    records = [json.loads(p.read_text(encoding="utf-8")) for p in failures_dir.glob("*.json")]
+    assert len(records) == 1
+    assert records[0]["entry_point"] == "compose_cli"
+    assert records[0]["stage"] == "render"
+    assert records[0]["error"] == "simulated render failure"
+    assert records[0]["meta"]["format"] == "docx"
+
+
 def test_render_plan_cli_docx_pptx() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
