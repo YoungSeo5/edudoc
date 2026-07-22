@@ -4,7 +4,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from core.adapters.hwpx_template_renderer import HwpxTemplateRenderError, render_hwpx_template
 from core.exporters.docx_exporter import DocxExporter
+from core.exporters.export_base import ExportResult
 from core.exporters.hwpx_via_hwpskill import HwpxViaHwpSkillExporter
 from core.exporters.pptx_exporter import PptxExporter
 from core.exporters.style_profile import (
@@ -12,6 +14,7 @@ from core.exporters.style_profile import (
     DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE,
     DocumentStyleProfile,
 )
+from core.templates.registry import TemplateRegistry
 
 from .report import ComposedReport, attachment_policy_for_family, validate_report
 
@@ -35,6 +38,9 @@ def render_report_to_hwpx(
     template: str = "report",
     style_reference: Path | str | None = None,
     profile_family: str | None = None,
+    institution: str | None = None,
+    document_type: str | None = None,
+    template_content: dict[str, object] | None = None,
 ):
     """Validate -> clean Markdown -> HWPX. Returns (problems, export_result).
 
@@ -44,6 +50,11 @@ def render_report_to_hwpx(
     ``export_result.meta['style_fallback_fields']`` (fallback_used honesty).
     Page margins are not header-settable, so they are left to the template.
     """
+    if (institution is None) != (document_type is None):
+        raise ValueError("institution and document_type must be provided together")
+    if institution is not None and template_content is None:
+        raise ValueError("template_content is required for institution template rendering")
+
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
     hwpx_path = Path(hwpx_path)
@@ -51,6 +62,49 @@ def render_report_to_hwpx(
     markdown_path.write_text(
         report.to_markdown(attachment_policy_for_family(profile_family)), encoding="utf-8"
     )
+
+    if institution is not None and document_type is not None:
+        registry = TemplateRegistry()
+        candidate = registry.find(institution, document_type)
+        meta = {
+            "engine": "institution_template",
+            "institution": institution,
+            "document_type": document_type,
+        }
+        if candidate is None:
+            return problems, ExportResult(
+                source=markdown_path,
+                output=hwpx_path,
+                ok=False,
+                error=(
+                    "approved institution template not found: "
+                    f"{institution} / {document_type}"
+                ),
+                meta={**meta, "available": False},
+            )
+
+        template_dir = registry.template_path(institution, document_type).parent
+        template_meta = {
+            **meta,
+            "available": True,
+            "template_id": candidate.identity.template_id,
+        }
+        try:
+            render_result = render_hwpx_template(template_dir, template_content, hwpx_path)
+        except HwpxTemplateRenderError as exc:
+            return problems, ExportResult(
+                source=markdown_path,
+                output=hwpx_path,
+                ok=False,
+                error=str(exc),
+                meta=template_meta,
+            )
+
+        return problems, ExportResult(
+            source=markdown_path,
+            output=render_result.output,
+            meta={**render_result.to_meta(), **template_meta},
+        )
 
     custom_header: Path | None = None
     fallback_fields: list[str] | None = None
