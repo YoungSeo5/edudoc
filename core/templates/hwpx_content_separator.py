@@ -6,10 +6,26 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final
+from typing import Any
 
 from ..adapters.hwpx_template_renderer import snapshot_source_hwpx
+from .hwpx_content_artifacts import (
+    render_separation_review,
+    update_template_content_separation,
+)
+from .hwpx_content_classifier import (
+    COMMON_RULE_DESCRIPTIONS,
+    COMMON_RULE_SET,
+    build_text_contexts,
+    classify_text,
+    content_category,
+)
 from .hwpx_package_extractor import HwpxExtractionResult, extract_hwpx_template
+from .hwpx_separation_rules import (
+    SeparationRules,
+    TextRole,
+    load_separation_rules,
+)
 
 
 _T_NODE_RE = re.compile(
@@ -19,21 +35,9 @@ _T_NODE_RE = re.compile(
     r"(</(?P=open_prefix)?t>)",
     re.S,
 )
-_DATE_RE = re.compile(r"(?:20\d{2}|'\d{2})[.년]\s*\d{1,2}")
-_PHONE_RE = re.compile(r"☎|0\d{1,2}-\d{3,4}-\d{4}|\d{3,4}-\d{4}")
-_FIXED_TEXTS: Final = frozenset({"※ 1페이지 하단에 보고자 및 연락처 등 표시"})
-_STABLE_TEXTS = {
-    "현안(이슈)보고",
-    "☑ 요약 또는 배경",
-    "1. 추진 배경",
-    "시    간",
-    "내     용",
-    "비   고",
-    "끝.",
-}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class HwpxContentSeparationResult:
     output_dir: Path
     extraction: HwpxExtractionResult
@@ -49,7 +53,9 @@ def separate_hwpx_template_content(
     template_id: str,
     template_name: str | None = None,
     institution: str = "확인 필요",
+    rules_path: Path | str | None = None,
 ) -> HwpxContentSeparationResult:
+    rules = load_separation_rules(rules_path)
     extraction = extract_hwpx_template(
         source,
         output_dir,
@@ -65,7 +71,7 @@ def separate_hwpx_template_content(
     placeholder_entries = []
 
     for raw_section in sorted((root / "raw").glob("section*.xml"), key=_section_sort_key):
-        decisions = _section_decisions(raw_section)
+        decisions = _section_decisions(raw_section, rules)
         template_xml, applied = _apply_decisions(raw_section.read_text(encoding="utf-8"), decisions)
         template_section = root / "template" / raw_section.name.replace(".xml", ".template.xml")
         template_section.write_text(template_xml, encoding="utf-8")
@@ -101,6 +107,9 @@ def separate_hwpx_template_content(
             {
                 "template_id": template_id,
                 "replacement_mode": "hp_t_text_only",
+                "classification_rule_set": COMMON_RULE_SET,
+                "classification_rules": list(COMMON_RULE_DESCRIPTIONS),
+                "template_rule_count": len(rules.rules),
                 "fields": placeholder_entries,
             },
             ensure_ascii=False,
@@ -110,10 +119,12 @@ def separate_hwpx_template_content(
         encoding="utf-8",
     )
     review.write_text(
-        _review_text(template_id, section_results, placeholder_entries),
+        render_separation_review(template_id, section_results, placeholder_entries, rules),
         encoding="utf-8",
     )
-    _update_template_json(root / "template.json", content_sample, placeholder_map, review)
+    update_template_content_separation(
+        root / "template.json", content_sample, placeholder_map, review
+    )
     return HwpxContentSeparationResult(
         output_dir=root,
         extraction=extraction,
@@ -123,33 +134,36 @@ def separate_hwpx_template_content(
     )
 
 
-def _section_decisions(path: Path) -> list[dict[str, Any]]:
+def _section_decisions(path: Path, rules: SeparationRules) -> list[dict[str, Any]]:
     root = ET.fromstring(path.read_bytes())
-    parent_map = {child: parent for parent in root.iter() for child in parent}
-    table_indexes = {id(node): index for index, node in enumerate(_nodes(root, "tbl"))}
     decisions = []
     counters: dict[str, int] = {}
-    for index, node in enumerate(_nodes(root, "t")):
-        text = "".join(node.itertext())
-        normalized = _normalize(text)
-        category = _category(normalized)
-        if normalized in _FIXED_TEXTS:
-            category = "fixed_text"
-        replace = bool(normalized) and category not in {"fixed_label", "fixed_text"}
-        field_id = None
-        if replace:
+    for context in build_text_contexts(root, path.name):
+        category = content_category(context.normalized_text)
+        role = classify_text(context, rules)
+        candidate_field_id = None
+        if context.normalized_text:
             counters[category] = counters.get(category, 0) + 1
-            field_id = f"{category}_{counters[category]:02d}"
+            candidate_field_id = f"{category}_{counters[category]:02d}"
+        replace = bool(context.normalized_text) and role is TextRole.CONTENT
+        field_id = candidate_field_id if replace else None
+        location = context.location
         decisions.append(
             {
-                "text_node_index": index,
-                "original_text": text,
-                "normalized_text": normalized,
+                "text_node_index": location.text_node_index,
+                "original_text": context.original_text,
+                "normalized_text": context.normalized_text,
                 "replace": replace,
                 "category": category,
+                "role": role.value,
                 "field_id": field_id,
                 "placeholder": f"{{{{{field_id}}}}}" if field_id else None,
-                "location": _location(node, parent_map, table_indexes, path.name),
+                "location": {
+                    "section": location.section,
+                    "table": location.table,
+                    "row": location.row,
+                    "col": location.col,
+                },
             }
         )
     return decisions
@@ -191,151 +205,6 @@ def _apply_decisions(xml: str, decisions: list[dict[str, Any]]) -> tuple[str, li
     return "".join(parts), applied
 
 
-def _category(text: str) -> str:
-    if not text:
-        return "empty"
-    if text in _STABLE_TEXTS:
-        return "fixed_label"
-    if _DATE_RE.search(text):
-        return "date"
-    if _PHONE_RE.search(text):
-        return "contact"
-    if "☑" in text or text.count("□") >= 2:
-        return "checkbox_line"
-    if text.startswith("□"):
-        return "body_paragraph"
-    if text.startswith("◦"):
-        return "body_bullet"
-    if text.startswith("*"):
-        return "stat_note"
-    if text.startswith("†"):
-        return "detail_note"
-    if text.startswith("⇨"):
-        return "conclusion"
-    if ("보고" in text or "현황" in text or "계획" in text) and len(text) <= 80:
-        return "document_title"
-    if text.endswith("국") or text.endswith("팀") or text.endswith("과"):
-        return "department"
-    return "content"
-
-
-def _location(
-    node: ET.Element,
-    parent_map: dict[ET.Element, ET.Element],
-    table_indexes: dict[int, int],
-    section_name: str,
-) -> dict[str, Any]:
-    table = None
-    row = None
-    col = None
-    current = node
-    while current in parent_map:
-        current = parent_map[current]
-        local = _local_name(current.tag)
-        if local == "tbl" and table is None:
-            table = table_indexes.get(id(current))
-        elif local == "tc":
-            for child in current:
-                if _local_name(child.tag) == "cellAddr":
-                    row = _int_attr(child, "rowAddr")
-                    col = _int_attr(child, "colAddr")
-                    break
-    return {"section": section_name, "table": table, "row": row, "col": col}
-
-
-def _nodes(root: ET.Element, local_name: str) -> list[ET.Element]:
-    return [node for node in root.iter() if _local_name(node.tag) == local_name]
-
-
-def _local_name(value: str) -> str:
-    return value.rsplit("}", 1)[-1].split(":", 1)[-1]
-
-
-def _int_attr(node: ET.Element, name: str) -> int | None:
-    for key, value in node.attrib.items():
-        if _local_name(key) == name:
-            try:
-                return int(value)
-            except ValueError:
-                return None
-    return None
-
-
-def _normalize(value: str) -> str:
-    return " ".join(value.split())
-
-
 def _section_sort_key(path: Path) -> int:
     match = re.search(r"section(\d+)", path.name)
     return int(match.group(1)) if match else 10**9
-
-
-def _review_text(
-    template_id: str,
-    section_results: list[dict[str, Any]],
-    entries: list[dict[str, Any]],
-) -> str:
-    lines = [
-        "# Template Content Separation Review",
-        "",
-        f"- Template ID: `{template_id}`",
-        "- Status: `candidate`",
-        "- XML structure, style IDs, and table shapes are preserved.",
-        "- Rendering removes `linesegarray` caches from changed sections so "
-        "Hancom can recalculate text layout.",
-        "- Rendering retains `linesegarray` caches in unchanged sections.",
-        "- Only selected `<hp:t>` text contents were replaced with placeholders.",
-        "",
-        "## Sections",
-        "",
-    ]
-    for section in section_results:
-        lines.append(
-            f"- `{section['section']}`: text_nodes={section['text_node_count']}, "
-            f"placeholders={section['placeholder_count']}"
-        )
-    lines.extend(["", "## Placeholder Fields", ""])
-    for entry in entries:
-        location = []
-        if entry.get("table") is not None:
-            location.append(f"table={entry['table']}")
-        if entry.get("row") is not None:
-            location.append(f"row={entry['row']}")
-        if entry.get("col") is not None:
-            location.append(f"col={entry['col']}")
-        suffix = f" ({', '.join(location)})" if location else ""
-        lines.append(
-            f"- `{entry['field_id']}` -> `{entry['placeholder']}` "
-            f"[{entry['category']}]{suffix}"
-        )
-    lines.append("")
-    return "\n".join(lines)
-
-
-def _update_template_json(
-    path: Path,
-    content_sample: Path,
-    placeholder_map: Path,
-    review: Path,
-) -> None:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    placeholder_data = json.loads(placeholder_map.read_text(encoding="utf-8"))
-    template_sections = sorted(
-        str(item.relative_to(path.parent)).replace("\\", "/")
-        for item in (path.parent / "template").glob("section*.template.xml")
-    )
-    data["content_separation"] = {
-        "status": "candidate",
-        "content_sample": content_sample.name,
-        "placeholder_map": placeholder_map.name,
-        "review": review.name,
-        "replacement_mode": "hp_t_text_only",
-        "field_count": len(placeholder_data.get("fields", [])),
-        "template_sections": template_sections,
-    }
-    data.setdefault("rendering_rules", {})
-    data["rendering_rules"]["self_contained_base"] = "source.hwpx"
-    data["rendering_rules"]["replace_only_hp_t_text"] = True
-    data["rendering_rules"]["preserve_table_structure"] = True
-    data["rendering_rules"]["preserve_linesegarray"] = False
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

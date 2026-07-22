@@ -19,6 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template-id", required=True)
     parser.add_argument("--template-name")
     parser.add_argument("--institution", default="확인 필요")
+    parser.add_argument("--rules", type=Path)
     args = parser.parse_args(argv)
 
     result = separate_hwpx_template_content(
@@ -27,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
         template_id=args.template_id,
         template_name=args.template_name,
         institution=args.institution,
+        rules_path=args.rules,
     )
     print(f"template: {result.extraction.template_json}")
     print(f"content_sample: {result.content_sample}")

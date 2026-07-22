@@ -353,7 +353,15 @@
     "placeholder_map": "placeholder_map.json",
     "review": "template.review.md",
     "replacement_mode": "hp_t_text_only",
-    "field_count": 39,
+    "classification_rule_set": "structural-v1",
+    "classification_rules": [
+      "standalone chapter, clause, item, and bullet markers",
+      "short section labels sharing a table with a section marker",
+      "single-text table header and first-column row-label cells",
+      "short numbered headings outside tables"
+    ],
+    "template_rule_count": 0,
+    "field_count": 27,
     "template_sections": [
       "template/section0.template.xml"
     ]
