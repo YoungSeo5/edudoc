@@ -220,6 +220,7 @@ def test_render_plan_cli_writes_a_render_failure_record(
             output=Path(output_path),
             ok=False,
             error="simulated render failure",
+            error_code="simulated_render_failed",
         )
 
     monkeypatch.setitem(render_plan._RENDERERS, "docx", fake_failing_renderer)
@@ -234,6 +235,7 @@ def test_render_plan_cli_writes_a_render_failure_record(
     assert len(records) == 1
     assert records[0]["entry_point"] == "compose_cli"
     assert records[0]["stage"] == "render"
+    assert records[0]["error_code"] == "simulated_render_failed"
     assert records[0]["error"] == "simulated render failure"
     assert records[0]["meta"]["format"] == "docx"
 

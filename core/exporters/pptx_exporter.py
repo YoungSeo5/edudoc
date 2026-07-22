@@ -49,10 +49,12 @@ class PptxExporter(BaseExporter):
         if not self.can_export(output_path):
             return ExportResult(source=markdown_path, output=output_path, ok=False,
                                 error=f"Unsupported output extension: {output_path.suffix} "
-                                      f"(supported: {sorted(self.supported_ext)})", meta=meta)
+                                      f"(supported: {sorted(self.supported_ext)})", meta=meta,
+                                error_code="export_unsupported_extension")
         if not markdown_path.exists():
             return ExportResult(source=markdown_path, output=output_path, ok=False,
-                                error=f"Markdown source does not exist: {markdown_path}", meta=meta)
+                                error=f"Markdown source does not exist: {markdown_path}", meta=meta,
+                                error_code="export_source_missing")
 
         try:
             blocks = parse_markdown(markdown_path.read_text(encoding="utf-8"))
@@ -64,7 +66,8 @@ class PptxExporter(BaseExporter):
                                 meta={**meta, "slides": len(prs.slides._sldIdLst)})
         except Exception as e:  # noqa: BLE001 - structured failure
             return ExportResult(source=markdown_path, output=output_path, ok=False,
-                                error=repr(e), meta={**meta, "stabilized": False})
+                                error=repr(e), meta={**meta, "stabilized": False},
+                                error_code="export_failed")
 
     # --- build ----------------------------------------------------------
 

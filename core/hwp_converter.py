@@ -47,6 +47,7 @@ class HwpSkillConverter(BaseConverter):
                 ok=False,
                 error=str(e),
                 meta={"converter": self.name},
+                error_code="conversion_not_implemented",
             )
         except Exception as e:  # noqa: BLE001 - keep failures structured
             return ConvertResult(
@@ -55,6 +56,7 @@ class HwpSkillConverter(BaseConverter):
                 ok=False,
                 error=repr(e),
                 meta={"converter": self.name},
+                error_code="conversion_failed",
             )
 
     def _convert_to_markdown(

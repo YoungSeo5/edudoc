@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
         if converter is None:
             failures.append({
                 "path": str(path),
+                "error_code": "converter_not_found",
                 "error": "no converter found",
             })
             continue
@@ -82,6 +83,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
         if not result.ok:
             failures.append({
                 "path": str(path),
+                "error_code": result.error_code or "conversion_failed",
                 "error": result.error or "conversion failed",
             })
             continue
@@ -108,6 +110,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="public_plan_cli",
                     stage="convert",
+                    error_code=failure["error_code"],
                     source=failure["path"],
                     error=failure["error"],
                 ),
@@ -121,6 +124,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="public_plan_cli",
                     stage="convert",
+                    error_code="no_processable_source",
                     source=", ".join(str(path) for path in args.paths),
                     error="no processable source documents found",
                     meta={"bundle_summary": dict(bundle.summary)},
@@ -166,6 +170,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="public_plan_cli",
                     stage="export",
+                    error_code=export_result.error_code or "export_failed",
                     source=str(docx_path),
                     error=export_result.error or "export failed",
                     meta={"exporter": export_result.meta.get("exporter"), "format": "docx"},
@@ -197,6 +202,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="public_plan_cli",
                     stage="export",
+                    error_code=render_result.error_code or "render_failed",
                     source=str(hwpx_path),
                     error=render_result.error or "export failed",
                     meta={"exporter": render_result.meta.get("engine"), "format": "hwpx"},
@@ -218,6 +224,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="public_plan_cli",
                     stage="convert",
+                    error_code=failure["error_code"],
                     source=failure["path"],
                     error=failure["error"],
                 ),

@@ -46,7 +46,12 @@ def test_gongmun_cli_crash_writes_a_gongmun_generate_failure_record(
 def test_gongmun_cli_failed_validation_writes_a_gongmun_validate_failure_record(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    failing_report = ValidationReport(violations=[Violation("end_mark", "본문 종결에 '끝.' 표시가 없음")])
+    failing_report = ValidationReport(
+        violations=[
+            Violation("end_mark", "본문 종결에 '끝.' 표시가 없음"),
+            Violation("attachment_count", "붙임 수량 불일치"),
+        ]
+    )
 
     def _fake_generate_and_validate(_path):
         return GongmunGenerationResult(markdown="# 제목\n\n본문\n", validation_report=failing_report)
@@ -67,10 +72,13 @@ def test_gongmun_cli_failed_validation_writes_a_gongmun_validate_failure_record(
 
         assert exit_code == 1
         records = _read_records(failures_dir)
-        assert len(records) == 1
-        assert records[0]["entry_point"] == "gongmun_cli"
-        assert records[0]["stage"] == "gongmun_validate"
-        assert "end_mark" in records[0]["error"]
+        assert len(records) == 2
+        assert {record["entry_point"] for record in records} == {"gongmun_cli"}
+        assert {record["stage"] for record in records} == {"gongmun_validate"}
+        assert {record["error_code"] for record in records} == {
+            "gongmun_validation_attachment_count",
+            "gongmun_validation_end_mark",
+        }
         # the existing per-run validation report is unchanged/additional, not replaced
         assert (tmp_path / "out" / "brief.validation.txt").exists()
 

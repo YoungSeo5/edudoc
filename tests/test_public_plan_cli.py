@@ -202,6 +202,7 @@ def test_public_plan_cli_export_failure_writes_failure_record(
                 output=output_path,
                 ok=False,
                 error="simulated export failure",
+                error_code="simulated_export_failed",
                 meta={"exporter": "DocxExporter"},
             )
 
@@ -234,6 +235,7 @@ def test_public_plan_cli_export_failure_writes_failure_record(
         record = json.loads(records[0].read_text(encoding="utf-8"))
         assert record["entry_point"] == "public_plan_cli"
         assert record["stage"] == "export"
+        assert record["error_code"] == "simulated_export_failed"
         assert record["error"] == "simulated export failure"
         assert record["meta"]["format"] == "docx"
 

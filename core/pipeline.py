@@ -49,13 +49,22 @@ class Pipeline:
                 f"지원하지 않는 확장자: {path.suffix} "
                 f"(지원: {sorted(self.registry.supported_ext)})"
             )
-            self._record_failure("convert", str(path), error)
-            return ConvertResult(source=path, markdown="", ok=False, error=error)
+            self._record_failure("convert", "converter_not_found", str(path), error)
+            return ConvertResult(
+                source=path,
+                markdown="",
+                ok=False,
+                error=error,
+                error_code="converter_not_found",
+            )
 
         result = converter.convert(path)
         if not result.ok:
             self._record_failure(
-                "convert", str(path), result.error or "conversion failed",
+                "convert",
+                result.error_code or "conversion_failed",
+                str(path),
+                result.error or "conversion failed",
                 meta={"converter": result.meta.get("converter")},
             )
 
@@ -152,6 +161,7 @@ class Pipeline:
             if not export_result.ok:
                 self._record_failure(
                     "export",
+                    export_result.error_code or "export_failed",
                     str(output_path),
                     export_result.error or "export failed",
                     meta={"exporter": exporter_name, "format": ext},
@@ -160,13 +170,20 @@ class Pipeline:
         return exports
 
     def _record_failure(
-        self, stage: str, source: str, error: str, *, meta: dict | None = None
+        self,
+        stage: str,
+        error_code: str,
+        source: str,
+        error: str,
+        *,
+        meta: dict | None = None,
     ) -> None:
         record_failure(
             self.config.failures_dir,
             FailureRecord(
                 entry_point="pipeline",
                 stage=stage,
+                error_code=error_code,
                 source=source,
                 error=error,
                 meta=meta or {},

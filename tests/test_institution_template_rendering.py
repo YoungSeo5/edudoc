@@ -103,6 +103,7 @@ def test_compose_returns_failure_when_institution_template_is_not_registered() -
     assert result.ok is False
     assert result.output == output
     assert result.error is not None
+    assert result.error_code == "institution_template_not_found"
     assert result.meta["engine"] == "institution_template"
     assert result.meta["available"] is False
 

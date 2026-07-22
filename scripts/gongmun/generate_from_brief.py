@@ -49,6 +49,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
             FailureRecord(
                 entry_point="gongmun_cli",
                 stage="gongmun_generate",
+                error_code="gongmun_generate_failed",
                 source=str(brief_path),
                 error=repr(exc),
             ),
@@ -61,15 +62,20 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
     print(f"validation_passed: {result.passed}")
 
     if not result.passed:
-        record_failure(
-            failures_dir,
-            FailureRecord(
-                entry_point="gongmun_cli",
-                stage="gongmun_validate",
-                source=str(brief_path),
-                error=result.validation_report.summary(),
-            ),
-        )
+        for violation in result.validation_report.violations:
+            if violation.severity != "error":
+                continue
+            record_failure(
+                failures_dir,
+                FailureRecord(
+                    entry_point="gongmun_cli",
+                    stage="gongmun_validate",
+                    error_code=f"gongmun_validation_{violation.rule}",
+                    source=str(brief_path),
+                    error=violation.message,
+                    meta={"severity": violation.severity},
+                ),
+            )
         return 1
     return 0
 

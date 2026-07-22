@@ -117,6 +117,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 FailureRecord(
                     entry_point="compose_cli",
                     stage="render",
+                    error_code=result.error_code or "render_failed",
                     source=str(out_path),
                     error=result.error or "render failed",
                     meta={"format": fmt},

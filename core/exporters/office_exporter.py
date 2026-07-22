@@ -75,6 +75,7 @@ class OfficeExporter(BaseExporter):
                     f"(supported: {sorted(self.supported_ext)})"
                 ),
                 meta={"exporter": self.name, "requires_optional_tool": True},
+                error_code="export_unsupported_extension",
             )
 
         if not markdown_path.exists():
@@ -84,6 +85,7 @@ class OfficeExporter(BaseExporter):
                 ok=False,
                 error=f"Markdown source does not exist: {markdown_path}",
                 meta={"exporter": self.name, "requires_optional_tool": True},
+                error_code="export_source_missing",
             )
 
         if not self._pandoc_available():
@@ -100,6 +102,7 @@ class OfficeExporter(BaseExporter):
                     "pandoc": self.pandoc_path,
                     "requires_optional_tool": True,
                 },
+                error_code="export_dependency_unavailable",
             )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -149,4 +152,5 @@ class OfficeExporter(BaseExporter):
                     "requires_optional_tool": True,
                     "returncode": e.returncode,
                 },
+                error_code="export_subprocess_failed",
             )

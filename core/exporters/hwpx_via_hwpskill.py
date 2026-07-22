@@ -62,12 +62,14 @@ class HwpxViaHwpSkillExporter(BaseExporter):
                 error=f"Unsupported output extension: {output_path.suffix} "
                       f"(supported: {sorted(self.supported_ext)})",
                 meta={**meta, "stabilized": False},
+                error_code="export_unsupported_extension",
             )
         if not markdown_path.exists():
             return ExportResult(
                 source=markdown_path, output=output_path, ok=False,
                 error=f"Markdown source does not exist: {markdown_path}",
                 meta={**meta, "stabilized": False},
+                error_code="export_source_missing",
             )
 
         scripts = self._skill_scripts_dir()
@@ -76,6 +78,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
                 source=markdown_path, output=output_path, ok=False,
                 error="hwp-skill md2hwpx.py not found under skills/; HWPX rendering unavailable",
                 meta={**meta, "available": False, "stabilized": False},
+                error_code="export_dependency_unavailable",
             )
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +101,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
             return ExportResult(
                 source=markdown_path, output=output_path, ok=False,
                 error=repr(e), meta={**meta, "stabilized": False},
+                error_code="export_subprocess_failed",
             )
 
         if build.returncode != 0 or not output_path.exists():
@@ -106,6 +110,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
                 source=markdown_path, output=output_path, ok=False,
                 error=detail[:800],
                 meta={**meta, "stabilized": False, "returncode": build.returncode},
+                error_code="export_subprocess_failed",
             )
 
         validation = self._validate(scripts, output_path)
@@ -114,6 +119,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
             source=markdown_path, output=output_path, ok=ok,
             error=None if ok else validation["summary"],
             meta={**meta, "stabilized": ok, "validation": validation},
+            error_code=None if ok else "export_validation_failed",
         )
 
     def _validate(self, scripts: Path, output_path: Path) -> dict:

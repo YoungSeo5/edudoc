@@ -23,6 +23,7 @@ class ConvertResult:
     error: str | None = None     # 실패 시 사유
     meta: dict = field(default_factory=dict)  # 페이지 수, 표 개수 등 부가정보
     document_model: DocumentModel | None = None  # 구조화 표현(있을 때만)
+    error_code: str | None = None  # 실패 유형을 나타내는 안정적인 코드
 
 
 class BaseConverter(ABC):

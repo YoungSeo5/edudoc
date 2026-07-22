@@ -27,6 +27,7 @@ class MarkdownConverter(BaseConverter):
                 ok=False,
                 error=f"Markdown file must be UTF-8 encoded: {e}",
                 meta={"converter": self.name},
+                error_code="source_encoding_invalid",
             )
         except Exception as e:  # noqa: BLE001
             return ConvertResult(
@@ -35,4 +36,5 @@ class MarkdownConverter(BaseConverter):
                 ok=False,
                 error=repr(e),
                 meta={"converter": self.name},
+                error_code="conversion_failed",
             )

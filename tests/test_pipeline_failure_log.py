@@ -27,6 +27,7 @@ class _AlwaysFailingConverter(BaseConverter):
             markdown="",
             ok=False,
             error="simulated conversion failure",
+            error_code="simulated_conversion_failed",
             meta={"converter": self.name},
         )
 
@@ -53,6 +54,7 @@ def test_unsupported_extension_writes_a_convert_failure_record() -> None:
         assert len(records) == 1
         assert records[0]["entry_point"] == "pipeline"
         assert records[0]["stage"] == "convert"
+        assert records[0]["error_code"] == "converter_not_found"
         assert records[0]["source"] == str(source)
         assert "지원하지 않는 확장자" in records[0]["error"]
 
@@ -76,6 +78,7 @@ def test_converter_failure_writes_a_convert_failure_record() -> None:
         records = _read_records(failures_dir)
         assert len(records) == 1
         assert records[0]["stage"] == "convert"
+        assert records[0]["error_code"] == "simulated_conversion_failed"
         assert records[0]["error"] == "simulated conversion failure"
         assert records[0]["meta"]["converter"] == "_AlwaysFailingConverter"
 
@@ -107,6 +110,7 @@ def test_export_failure_writes_an_export_failure_record(monkeypatch: pytest.Monk
                 output=output_path,
                 ok=False,
                 error="simulated export failure",
+                error_code="simulated_export_failed",
                 meta={"exporter": "DocxExporter"},
             )
 
@@ -132,6 +136,7 @@ def test_export_failure_writes_an_export_failure_record(monkeypatch: pytest.Monk
         assert len(records) == 1
         assert records[0]["entry_point"] == "pipeline"
         assert records[0]["stage"] == "export"
+        assert records[0]["error_code"] == "simulated_export_failed"
         assert records[0]["error"] == "simulated export failure"
         assert records[0]["meta"]["format"] == ".docx"
 

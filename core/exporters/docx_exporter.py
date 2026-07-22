@@ -44,6 +44,7 @@ class DocxExporter(BaseExporter):
                     f"(supported: {sorted(self.supported_ext)})"
                 ),
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_unsupported_extension",
             )
         if not markdown_path.exists():
             return ExportResult(
@@ -52,6 +53,7 @@ class DocxExporter(BaseExporter):
                 ok=False,
                 error=f"Markdown source does not exist: {markdown_path}",
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_source_missing",
             )
 
         try:
@@ -93,6 +95,7 @@ class DocxExporter(BaseExporter):
                 ok=False,
                 error=repr(e),
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_failed",
             )
 
     # --- Block rendering -------------------------------------------------

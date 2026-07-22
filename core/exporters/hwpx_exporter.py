@@ -39,6 +39,7 @@ class HwpxExporter(BaseExporter):
                     f"(supported: {sorted(self.supported_ext)})"
                 ),
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_unsupported_extension",
             )
         if not markdown_path.exists():
             return ExportResult(
@@ -47,6 +48,7 @@ class HwpxExporter(BaseExporter):
                 ok=False,
                 error=f"Markdown source does not exist: {markdown_path}",
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_source_missing",
             )
 
         try:
@@ -76,6 +78,7 @@ class HwpxExporter(BaseExporter):
                         "but does not claim final institution-approved layout"
                     ),
                 },
+                error_code=None if report.passed else "export_validation_failed",
             )
         except Exception as exc:  # noqa: BLE001 - structured exporter failure
             return ExportResult(
@@ -84,6 +87,7 @@ class HwpxExporter(BaseExporter):
                 ok=False,
                 error=repr(exc),
                 meta={"exporter": self.name, "requires_optional_tool": False},
+                error_code="export_failed",
             )
 
     def _write_package(

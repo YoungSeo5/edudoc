@@ -25,6 +25,7 @@ class HwpSkillRenderResult:
     ok: bool
     error: str | None = None
     meta: dict = field(default_factory=dict)
+    error_code: str | None = None
 
 
 class HwpSkillRenderer:
@@ -63,6 +64,7 @@ class HwpSkillRenderer:
                     "'public_institution_plan'"
                 ),
                 meta=meta,
+                error_code="render_profile_invalid",
             )
 
         script = self.skill_scripts_dir / "gyehoek.py"
@@ -73,6 +75,7 @@ class HwpSkillRenderer:
                 ok=False,
                 error=f"hwp-skill gyehoek.py not found: {script}",
                 meta={**meta, "available": False},
+                error_code="render_dependency_unavailable",
             )
 
         contract = self._public_plan_contract(
@@ -114,6 +117,7 @@ class HwpSkillRenderer:
                 ok=False,
                 error=repr(exc),
                 meta={**meta, "contract": contract},
+                error_code="render_subprocess_failed",
             )
 
         if completed.returncode != 0 or not output.exists():
@@ -128,6 +132,7 @@ class HwpSkillRenderer:
                     "contract": contract,
                     "returncode": completed.returncode,
                 },
+                error_code="render_subprocess_failed",
             )
 
         validation = self._validate(output)
@@ -144,6 +149,11 @@ class HwpSkillRenderer:
                 "stdout": completed.stdout,
                 "stderr": completed.stderr,
             },
+            error_code=(
+                None
+                if validation["passed"] is not False
+                else "render_validation_failed"
+            ),
         )
 
     def _public_plan_contract(

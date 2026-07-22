@@ -15,6 +15,7 @@ class ExportResult:
     ok: bool = True
     error: str | None = None
     meta: dict = field(default_factory=dict)
+    error_code: str | None = None
 
 
 class BaseExporter(ABC):

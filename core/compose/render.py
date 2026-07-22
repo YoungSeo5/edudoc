@@ -81,6 +81,7 @@ def render_report_to_hwpx(
                     f"{institution} / {document_type}"
                 ),
                 meta={**meta, "available": False},
+                error_code="institution_template_not_found",
             )
 
         template_dir = registry.template_path(institution, document_type).parent
@@ -98,6 +99,7 @@ def render_report_to_hwpx(
                 ok=False,
                 error=str(exc),
                 meta=template_meta,
+                error_code="institution_template_render_failed",
             )
 
         return problems, ExportResult(
