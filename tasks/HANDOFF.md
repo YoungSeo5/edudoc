@@ -6,10 +6,16 @@ The current routing contract is aligned to source/test behavior: generic `main.p
 
 Institution templates now live under `templates/institutions/<institution>/<document_type>/`. `TemplateRegistry`, template-dependent tests/fixtures, current documentation, and the document-binary Git exception use that path; protected AI/reference skills were not moved.
 
+The compose CLI now connects approved institution-template HWPX rendering through `--institution`, `--document-type`, and `--template-content`. The three options are an all-or-none group, require `hwpx` in `--to`, reuse `load_content_fields()`, and are passed only to the HWPX renderer. Missing templates and render failures remain explicit failures; the CLI does not fall back to the generic HWPX renderer.
+
 Gongmun render assets now live under `templates/render/gongmun/`; global template success and false-positive defaults live under `templates/quality/`. The extraction CLI and style-profile test use these explicit namespaces.
 
 ## Verification results
 
+- Compose institution CLI tests: `python -m pytest tests/test_compose_render_cli.py -q` -> **9 passed**.
+- Institution rendering tests: `python -m pytest tests/test_institution_template_rendering.py -q` -> **5 passed, 1 known failure**. The remaining failure is the pre-existing one-page placeholder-map mismatch and was not changed.
+- Manual approved-template CLI QA used `templates/institutions/금융감독원/금감원 원장보고 가상자산/content.sample.json` with `--out exports/compose/institution-template-cli-qa-20260722`: **exit 0**, output HWPX created, output reported `ok=true`, all non-section package entries matched the approved template's `source.hwpx` byte-for-byte, the sample title was filled, and no placeholders remained. This confirms the institution-template path was used without generic-renderer fallback and keeps QA output outside protected packages.
+- Post-CLI full command `python -m pytest tests/ -q`: **162 passed, the same 1 known failure**.
 - Focused adapter, compose, Pipeline DOCX/PPTX, and validation-routing tests: **40 passed**.
 - Pre-migration baseline `python -m pytest tests/ -q`: **149 passed, 2 failed, 0 pytest warnings**.
 - The two failures are from untracked `tests/test_institution_template_rendering.py`: one expects an unsupported `institution` argument on `render_report_to_hwpx`; the other expects structural fields to be absent from the current one-page placeholder map. The migration changed paths only, not the compose signature or template contents.
@@ -27,5 +33,5 @@ Gongmun render assets now live under `templates/render/gongmun/`; global templat
 
 ## Remaining work
 
-- HWPX Pipeline export remains experimental; PDF remains an optional external-tool fallback; the generic HWPX placeholder renderer is implemented/tested but not end-to-end connected.
+- HWPX Pipeline export remains experimental; PDF remains an optional external-tool fallback. Approved institution-template HWPX rendering is compose/CLI-connected, while automatic template selection from a general user request remains future product integration.
 - Protected/untracked `skills/hwp-skill` still contains its own historical `Workflow G` references. Do not edit protected skills without explicit approval.
