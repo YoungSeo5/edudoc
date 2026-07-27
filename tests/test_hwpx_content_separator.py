@@ -232,6 +232,67 @@ def test_separator_is_deterministic_for_the_same_source() -> None:
         ).read_bytes()
 
 
+def _one_paragraph_section(text: str) -> str:
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" '
+        'xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+        f"<hp:p><hp:run><hp:t>{text}</hp:t></hp:run></hp:p>"
+        "</hs:sec>"
+    )
+
+
+def _write_two_section_hwpx(path: Path, section0: str, section1: str) -> None:
+    content = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<opf:package xmlns:opf="http://www.idpf.org/2007/opf/">'
+        "<opf:manifest>"
+        '<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>'
+        '<opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/>'
+        '<opf:item id="section1" href="Contents/section1.xml" media-type="application/xml"/>'
+        "</opf:manifest>"
+        '<opf:spine><opf:itemref idref="section0"/><opf:itemref idref="section1"/></opf:spine>'
+        "</opf:package>"
+    )
+    with zipfile.ZipFile(path, "w") as package:
+        package.writestr("mimetype", "application/hwp+zip", compress_type=zipfile.ZIP_STORED)
+        package.writestr("Contents/header.xml", HEADER)
+        package.writestr("Contents/content.hpf", content)
+        package.writestr("Contents/section0.xml", section0)
+        package.writestr("Contents/section1.xml", section1)
+        package.writestr("settings.xml", "<settings/>")
+
+
+def test_separator_assigns_globally_unique_field_ids_across_sections() -> None:
+    # Given: two sections whose replaceable content collides under per-section numbering.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        source = root / "source.hwpx"
+        output = root / "template"
+        _write_two_section_hwpx(
+            source,
+            _one_paragraph_section("첫째 섹션의 실제 작성 내용입니다"),
+            _one_paragraph_section("둘째 섹션의 실제 작성 내용입니다"),
+        )
+
+        # When: the source is separated into content and template XML.
+        result = separate_hwpx_template_content(
+            source, output, template_id="multi_section", institution="demo"
+        )
+
+        content = json.loads(result.content_sample.read_text(encoding="utf-8"))
+        mapping = json.loads(result.placeholder_map.read_text(encoding="utf-8"))
+        field_ids = [entry["field_id"] for entry in mapping["fields"]]
+
+        # Then: field ids stay globally unique, so no section overwrites another's value.
+        assert len(field_ids) == len(set(field_ids))
+        assert len(content["fields"]) == len(mapping["fields"])
+        sections = {entry["section"] for entry in mapping["fields"]}
+        assert {"section0.xml", "section1.xml"} <= sections
+        assert "첫째 섹션의 실제 작성 내용입니다" in content["fields"].values()
+        assert "둘째 섹션의 실제 작성 내용입니다" in content["fields"].values()
+
+
 if __name__ == "__main__":
     test_separator_preserves_footer_instruction_as_fixed_text()
     print("PASS: HWPX content separator")
