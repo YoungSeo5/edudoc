@@ -1,12 +1,11 @@
 # Current Task
 
-## Goal
+## Status
 
-Separate Gongmun render assets into `templates/render/gongmun/` and global template-quality defaults into `templates/quality/` without introducing test regressions.
+No active task.
 
-## Completion conditions
+## Start rule
 
-- Renderer/profile references use `templates/render/gongmun/`; extraction defaults use `templates/quality/`.
-- Both source directories are moved intact and current code, tests, and non-archive docs have no stale path references.
-- Focused style/quality tests and the full pytest suite introduce no failures beyond the two baseline institution-rendering failures.
-- The namespace migration and exact verification result are recorded in `tasks/HANDOFF.md`.
+- Replace this file only when the user gives the next concrete task.
+- Record that task's input, output, and completion criteria.
+- Do not infer a next task from historical notes or non-blocking cleanup candidates.

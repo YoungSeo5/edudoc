@@ -1,5 +1,11 @@
 # Canonical Loop Roadmap
 
+> **Archived 2026-07-23 — retired planning frame. Not a current source of truth.**
+> The "Loop N" roadmap below was superseded by a code-and-test-first model (see
+> root `AGENTS.md`, which reads code + tests as the highest-priority statement of
+> behavior). Current canonical guidance: root `AGENTS.md`, `tasks/HANDOFF.md`, and
+> `docs/export-status.md`. Frame-transition history: `MEMORY.md`. Kept for history only.
+
 This document is the canonical source for loop numbering in the edudoc project.
 
 Loop numbers must not be reassigned based on implementation order.

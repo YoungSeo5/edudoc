@@ -2,36 +2,30 @@
 
 ## Current state
 
-The current routing contract is aligned to source/test behavior: generic `main.py run/watch` normalizes and exports only; it never runs Gongmun writing rules. Gongmun generation/validation is explicit, and compose applies Gongmun attachment/style policy only for `profile_family="gongmun"`. Historical Loop 8 notes moved to [docs/archive/handoff-loop8-history.md](../docs/archive/handoff-loop8-history.md).
+- No active task or unresolved blocker is recorded.
+- Approved institution-template rendering now preserves the `template_id` from
+  `content.json` and rejects it when it differs from the resolved approved
+  template. It does not produce an HWPX or fall back to generic rendering.
+- Architecture and HWPX agent policy now describe the connected general
+  placeholder route and the inactive table-fill adapter accurately.
 
-Institution templates now live under `templates/institutions/<institution>/<document_type>/`. `TemplateRegistry`, template-dependent tests/fixtures, current documentation, and the document-binary Git exception use that path; protected AI/reference skills were not moved.
+## Next action
 
-The compose CLI now connects approved institution-template HWPX rendering through `--institution`, `--document-type`, and `--template-content`. The three options are an all-or-none group, require `hwpx` in `--to`, reuse `load_content_fields()`, and are passed only to the HWPX renderer. Missing templates and render failures remain explicit failures; the CLI does not fall back to the generic HWPX renderer.
+- Start the user's next concrete product task. Do not promote historical output
+  cleanup, dead-code candidates, or export-document cleanup ahead of it.
 
-Gongmun render assets now live under `templates/render/gongmun/`; global template success and false-positive defaults live under `templates/quality/`. The extraction CLI and style-profile test use these explicit namespaces.
+## Current verification
 
-## Verification results
+- Focused institution-template tests:
+  `python -m pytest tests/test_compose_render_cli.py tests/test_institution_template_rendering.py tests/test_hwpx_template_renderer.py -q`
+  -> **28 passed**.
+- Full suite: `python -m pytest tests/ -q` -> **186 passed**.
+- `python scripts/harness/check_dependency_policy.py` -> **PASS**.
+- `python scripts/harness/check_hwp_priority_drift.py` -> **PASS**.
 
-- Compose institution CLI tests: `python -m pytest tests/test_compose_render_cli.py -q` -> **9 passed**.
-- Institution rendering tests: `python -m pytest tests/test_institution_template_rendering.py -q` -> **5 passed, 1 known failure**. The remaining failure is the pre-existing one-page placeholder-map mismatch and was not changed.
-- Manual approved-template CLI QA used `templates/institutions/금융감독원/금감원 원장보고 가상자산/content.sample.json` with `--out exports/compose/institution-template-cli-qa-20260722`: **exit 0**, output HWPX created, output reported `ok=true`, all non-section package entries matched the approved template's `source.hwpx` byte-for-byte, the sample title was filled, and no placeholders remained. This confirms the institution-template path was used without generic-renderer fallback and keeps QA output outside protected packages.
-- Post-CLI full command `python -m pytest tests/ -q`: **162 passed, the same 1 known failure**.
-- Focused adapter, compose, Pipeline DOCX/PPTX, and validation-routing tests: **40 passed**.
-- Pre-migration baseline `python -m pytest tests/ -q`: **149 passed, 2 failed, 0 pytest warnings**.
-- The two failures are from untracked `tests/test_institution_template_rendering.py`: one expects an unsupported `institution` argument on `render_report_to_hwpx`; the other expects structural fields to be absent from the current one-page placeholder map. The migration changed paths only, not the compose signature or template contents.
-- Legacy HTML/CSS cleanup: removed unreferenced root `generate.py`, `templates/html/`, and `templates/styles/`. A full post-delete run remained **149 passed, the same 2 pre-existing failures**, so the deletion introduced no new failures.
-- Institution-template focused tests: **33 passed, the same 2 baseline failures**; all 8 move-induced missing-path failures were eliminated.
-- Move integrity: **57 source files / 57 destination files**. Git-filtered content matches the former tree except `AGENTS.md`, `CLAUDE.md`, and `README.md`, whose internal path documentation was intentionally updated.
-- Post-migration full command `python -m pytest tests/ -q`: **150 passed, the same 2 baseline failures, 0 pytest warnings**. The added passing test fixes the registry default path at `templates/institutions/`.
-- Render/quality namespace baseline `python -m pytest tests/ -q`: **150 passed, 2 failed, 0 pytest warnings**.
-- Focused style-profile and template-quality tests: **8 passed**.
-- Manual extraction QA with `scripts/templates/extract_template.py` and the default global quality rules: **exit 0, status=validated, gate_passed=True**.
-- Post-namespace full command `python -m pytest tests/ -q`: **150 passed, the same 2 baseline failures, 0 pytest warnings**; no path-related failure was introduced.
-- Folder-policy checks: dependency policy and HWPX-first wording policy both passed.
-- Current-source stale-path search found no reference to the former institution-template path. A split-component search found only the intentional protected pack path `skills/hwp-skill/templates/report/header.xml`, which is a different runtime boundary and was not changed.
-- Markdown relative-link check: passed. `git diff --check`: no whitespace errors (only line-ending notices). The named editor residue `core/pipeline.py.tmp.81788.a7595ec5b763` is absent and unreferenced.
+## Non-blocking baseline
 
-## Remaining work
-
-- HWPX Pipeline export remains experimental; PDF remains an optional external-tool fallback. Approved institution-template HWPX rendering is compose/CLI-connected, while automatic template selection from a general user request remains future product integration.
-- Protected/untracked `skills/hwp-skill` still contains its own historical `Workflow G` references. Do not edit protected skills without explicit approval.
+- The optional strict Python audit still reports six pre-existing findings in
+  `RenderResult`, placeholder-map metadata typing, and existing compose
+  `ValueError` boundaries. This task introduced no new audit category. Do not
+  treat those findings as the next task without an explicit user request.
