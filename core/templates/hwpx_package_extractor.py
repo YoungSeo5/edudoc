@@ -15,6 +15,10 @@ from zipfile import BadZipFile, ZipFile, is_zipfile
 from .extractors.style import extract_style
 from .models import RendererContract, TemplateCandidate, TemplateIdentity
 
+# 이 모듈의 경계:
+# 원본 HWPX ZIP → 선택 자산을 raw/와 template/에 바이트 그대로 복사
+#                → 구조·스타일 분석 결과와 candidate template.json 작성
+# 여기서는 실제 텍스트를 {{placeholder}}로 바꾸지 않는다.
 _SECTION_RE = re.compile(r"^Contents/section(\d+)\.xml$", re.IGNORECASE)
 _MAX_ENTRY_BYTES = 100 * 1024 * 1024
 _MAX_SELECTED_BYTES = 512 * 1024 * 1024
@@ -54,6 +58,9 @@ def extract_hwpx_template(
     """Extract selected HWPX assets without modifying or reserializing XML."""
     source = Path(source)
     output_dir = Path(output_dir)
+
+    # 흐름 1: 입력이 실제 HWPX ZIP인지, template_id와 출력 경로가 안전한지
+    # 먼저 확인한다. 기존 폴더에 덮어쓰지 않고 새 후보 폴더만 만든다.
     _validate_inputs(source, output_dir, template_id)
     output_dir.mkdir(parents=True, exist_ok=False)
 
@@ -65,6 +72,8 @@ def extract_hwpx_template(
     fixture_comparison: list[dict[str, Any]] = []
 
     try:
+        # 흐름 2: ZIP에서 템플릿 분석에 필요한 항목만 임시 작업공간으로
+        # 안전하게 꺼낸다. 경로 탈출과 과도한 압축 해제 크기는 하위 함수가 막는다.
         with tempfile.TemporaryDirectory(prefix=".extracting-", dir=output_dir) as temp_name:
             workspace = Path(temp_name)
             with ZipFile(source, "r") as package:
@@ -72,6 +81,8 @@ def extract_hwpx_template(
                 selected = _select_members(package, warnings)
                 extracted = _extract_selected_to_workspace(package, selected, workspace)
 
+            # 흐름 3: raw/는 원본 증거 보존용이고 template/은 이후
+            # hwpx_content_separator가 placeholder를 넣을 작업본이다.
             raw_dir = output_dir / "raw"
             template_dir = output_dir / "template"
             for archive_name, workspace_path, raw_relative in extracted:
@@ -91,6 +102,8 @@ def extract_hwpx_template(
                     template_path = template_dir / template_relative
                     _copy_exact(workspace_path, template_path, output_dir)
 
+            # 흐름 4: 복사한 XML은 수정하지 않고 읽기만 하며, 글꼴·문단·표·
+            # 보이는 텍스트와 placeholder 후보를 분석 기록으로 만든다.
             raw_header = raw_dir / "header.xml"
             raw_content = raw_dir / "content.hpf"
             section_paths = sorted(
@@ -112,6 +125,8 @@ def extract_hwpx_template(
                 warnings,
             )
 
+        # 흐름 5: 선택하지 않은 패키지 항목과 필수 자산 누락은 삭제하거나
+        # 보정하지 않고 경고로 남긴다.
         missing = _missing_required_assets(output_dir)
         warnings.extend(f"missing expected asset: {item}" for item in missing)
         unprocessed = _unprocessed_entries(package_entries)
@@ -126,6 +141,9 @@ def extract_hwpx_template(
             f"raw/{path.name}"
             for path in sorted((output_dir / "raw").glob("section*.xml"), key=_section_sort_key)
         ]
+
+        # 흐름 6: 지금까지의 관찰 결과를 통합 모델로 묶는다. status는 반드시
+        # candidate이며, 자동 분석만으로 승인된 템플릿이 되지 않는다.
         candidate = TemplateCandidate(
             identity=TemplateIdentity(
                 institution=institution,
@@ -188,6 +206,8 @@ def extract_hwpx_template(
             status="candidate",
         )
 
+        # 흐름 7: 기계가 읽는 candidate 메타데이터와 사람이 검토할 보고서를
+        # 같은 출력 폴더에 기록해 다음 콘텐츠 분리 단계로 넘긴다.
         template_json = output_dir / "template.json"
         template_json.write_text(
             json.dumps(candidate.to_dict(), ensure_ascii=False, indent=2) + "\n",
@@ -205,11 +225,13 @@ def extract_hwpx_template(
             candidate=candidate,
         )
     except Exception:
-        # A failed first extraction must not leave a half-valid template package.
+        # 추출 도중 실패하면 반쪽짜리 후보 폴더를 남기지 않는다.
         shutil.rmtree(output_dir, ignore_errors=True)
         raise
 
 
+# ZIP 입력 경계: 형식, 크기, 중복 이름, 경로 탈출을 검사한 뒤
+# 허용된 자산만 임시 작업공간과 후보 폴더로 복사한다.
 def _validate_inputs(source: Path, output_dir: Path, template_id: str) -> None:
     if source.suffix.lower() != ".hwpx":
         raise ValueError(f"source must be a .hwpx file: {source}")
@@ -323,6 +345,8 @@ def _copy_exact(source: Path, destination: Path, output_dir: Path) -> None:
     shutil.copyfile(source, destination)
 
 
+# 분석 경계: 아래 함수들은 복사된 XML에서 요약 정보만 읽으며,
+# raw/ 또는 template/ XML을 다시 직렬화하거나 수정하지 않는다.
 def _analyze_header(path: Path, errors: list[str]) -> dict[str, Any]:
     root = _parse_xml(path, errors)
     if root is None:
@@ -592,6 +616,8 @@ def _compare_fixtures(
     return comparisons
 
 
+# 보고 경계: TemplateCandidate에 축적한 관찰 결과를 사람이 검토할 Markdown으로
+# 펼친다. 이 보고서는 승인이나 placeholder 적용을 수행하지 않는다.
 def _render_report(candidate: TemplateCandidate) -> str:
     package = candidate.package_summary
     structure = candidate.structure

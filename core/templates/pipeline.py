@@ -23,6 +23,9 @@ from .quality.success_rules import SuccessRules
 
 UNKNOWN = "확인 필요"
 
+# 이 모듈은 참조 문서에서 일반적인 구조·스타일 근거를 모아 품질을 판정한다.
+# HWPX 패키지 복사와 placeholder XML 생성은 hwpx_package_extractor 및
+# hwpx_content_separator의 별도 책임이다.
 
 def build_candidate(
     reference: Path | str,
@@ -34,6 +37,9 @@ def build_candidate(
 ) -> TemplateCandidate:
     """Build one candidate shape from deterministic reference observations."""
     reference = Path(reference)
+
+    # 흐름 1: 스타일은 형식과 별개로 먼저 추출하고, 아래 분기에서는
+    # 참조 형식별로 얻을 수 있는 구조 증거만 수집한다.
     style = extract_style(reference)
     evidence = [f"reference_path: {reference.as_posix()}"]
     style_mentions: list[str] = []
@@ -60,6 +66,8 @@ def build_candidate(
     if style_mentions:
         evidence.extend(f"style_text_mention (not parsed style): {item}" for item in style_mentions)
 
+    # 흐름 2: 자동 추출로 증명하지 못한 필드는 추측하지 않고
+    # unknown_fields와 "확인 필요"로 명시한다.
     unknown_fields = ["structure.required_sections", "structure.required_fields"]
     for field_name in ("font_family", "body_font_size_pt", "page_margins_mm", "line_spacing"):
         if getattr(style, field_name) is None:
@@ -73,6 +81,9 @@ def build_candidate(
         "required_fields": UNKNOWN,
         "repeat_sections": UNKNOWN,
     }
+
+    # 흐름 3: 추출 결과를 모든 템플릿 품질 단계가 공유하는
+    # TemplateCandidate 한 개로 정규화한다.
     return TemplateCandidate(
         identity=TemplateIdentity(
             institution=institution,
@@ -108,6 +119,8 @@ def run_template_pipeline(
 ) -> tuple[TemplateCandidate, GateResult]:
     """Extract, lint, refine, and gate a template candidate."""
     rules = success_rules or SuccessRules()
+
+    # 흐름 1: 참조 문서에서 최초 후보를 만든다.
     candidate = build_candidate(
         reference,
         institution=institution,
@@ -115,6 +128,9 @@ def run_template_pipeline(
         route=route,
         extends=extends,
     )
+
+    # 흐름 2: 과거 검토에서 확정한 오탐 규칙을 먼저 적용해,
+    # 이후 lint와 보정이 같은 오탐을 다시 문제로 취급하지 않게 한다.
     memory_diagnostics = apply_false_positive_rules(
         candidate,
         false_positive_rules or [],
@@ -122,6 +138,9 @@ def run_template_pipeline(
 
     passes = 0
     refinement_history = []
+
+    # 흐름 3: lint 진단으로 자동 보정 가능한 항목만 제한 횟수 내에서
+    # 고친다. 더 이상 바뀌지 않으면 즉시 반복을 끝낸다.
     for pass_number in range(1, max_refinement_passes + 1):
         diagnostics = lint_candidate(candidate, rules)
         if not refine_candidate(candidate, diagnostics):
@@ -129,6 +148,9 @@ def run_template_pipeline(
         refinement_history.extend(diagnostics)
         passes = pass_number
 
+    # 흐름 4: 보정이 끝난 최종 후보를 다시 검사하고 성공 게이트를 평가한다.
+    # 통과 상태는 validated일 뿐 approved가 아니며, 승인은 serialization 단계의
+    # 명시적 approve 입력이 별도로 필요하다.
     candidate.refinement_passes = passes
     final_diagnostics = lint_candidate(candidate, rules)
     candidate.diagnostics = memory_diagnostics + refinement_history + final_diagnostics
