@@ -1,74 +1,55 @@
-# HWPX template rendering: agent vs. runtime code roles
+# HWPX template routing rules
 
-Referenced from root `AGENTS.md` under **Templates**. This is the full rule that
-bullet summarizes.
+Root `AGENTS.md` points here for the complete HWPX template routing rule.
 
-## Role split
+## Goal
 
-- **AI agent**: selects an approved `template_id` (institution × document type)
-  and produces explicit `field_values` from source material. The agent decides
-  *meaning* — which template fits, what content goes in which field.
-- **Runtime code**: only resolves the given `template_id`, validates
-  `placeholder_map.json`, replaces the mapped XML locations, preserves fixed
-  structure, and strictly validates the output package.
+Reuse an exact approved template when it exists. Create a new QA candidate only
+when no approved template exists or the user explicitly requests
+re-extraction.
 
-Runtime code MUST NOT:
+## The agent MUST NOT
 
-- infer which template or field a piece of content belongs to
-- invent a value for a missing field
-- silently fall back to the generic `md2hwpx` path when an institution template
-  was explicitly requested (it must raise instead)
+- recursively search `exports/`, `sandbox/`, references, or unrelated HWPX files
+  to discover a template or guess which attachment the user meant
+- create a candidate before calling
+  `TemplateRegistry.find(institution, document_type)`
+- regenerate an approved template merely because the user attached an example
+- create a second template when the requested `template_id` conflicts with the
+  approved template for the same institution and document type
+- guess a missing source, institution, or document type, or ask the user to
+  invent a new `template_id`
+- overwrite an existing candidate directory
+- write an unapproved candidate into `templates/institutions/` or change its
+  status to `approved`
+- claim that strict package validation proves visual fidelity or institution
+  approval
+- invent missing field values or silently fall back to generic `md2hwpx`
+- require the user to repeat internal CLI commands or QA steps
 
-## Extraction → storage → approval pipeline
+## Required route
 
-1. Convert legacy HWP through the edudoc-owned adapter at
-   `core/adapters/hwpx_skill_adapter.py`, using the local engine under
-   `tools/hwp2hwpx-python-refactor/hwp2hwpx/`. Do not auto-install or auto-clone.
-2. Extract the HWPX package with `core/templates/hwpx_package_extractor.py`,
-   then separate fixed XML structure from replaceable content with
-   `core/templates/hwpx_content_separator.py`. CLI entry point:
-   `scripts/templates/separate_hwpx_template_content.py`.
-3. Store templates under `templates/institutions/<institution>/<document-type>/`.
-   Reusable assets live under `template/header.xml` and
-   `template/section*.template.xml`; source evidence stays under `raw/`. Current
-   examples: `금융감독원/금감원 원장보고/` (`fss_director_report`),
-   `금융감독원/금감원 원장보고 가상자산/` (`fss_virtual_asset_report`),
-   `금융감독원/금감원 원페이지/` (`fss_one_page`).
-4. Load only explicitly approved `template.json` files through
-   `core/templates/registry.py` (`TemplateRegistry.find`, default root
-   `templates/institutions`). A candidate is not an approved template.
-5. Fill content two ways, both connected to runtime entry points:
-   - **Table cells**: `core/adapters/hwpx_table_fill_adapter.py`, which shells
-     out to the protected `skills/hwp-skill/scripts/fill_hwpx.py`. Covered by
-     `tests/test_hwpx_table_fill_adapter.py`.
-   - **General `{{placeholder}}` text**: `core/adapters/hwpx_template_renderer.py`
-     (`render_hwpx_template` / `fill_template_sections`). Connected through
-     `core/compose/render.py`'s `render_report_to_hwpx()` when `institution`,
-     `document_type`, and `template_content` are supplied — reachable from
-     `scripts/compose/render_plan.py --institution --document-type
-     --template-content`. If no approved template is found for the given
-     institution/document type, it raises rather than falling back to generic
-     `md2hwpx`.
+1. Resolve only the exact attached source. If it is missing or ambiguous, ask
+   for the file.
+2. Obtain `institution` and `document_type`, then call
+   `TemplateRegistry.find(institution, document_type)`. This checks only
+   `templates/institutions/<institution>/<document-type>/template.json`.
+3. If an approved template exists, reuse it and do not create a candidate.
+4. If the user supplied a different `template_id`, report the conflict and stop
+   until the user decides.
+5. If no approved template exists, run
+   `scripts/templates/qa_hwpx_template.py` in a new ignored
+   `sandbox/template-candidates/` directory. Omit `--template-id` unless the
+   user explicitly supplied one; the command derives a stable ASCII-safe ID
+   from the institution, document type, and source contents.
+6. If the user explicitly requests re-extraction, create a separate candidate
+   without modifying the approved template.
+7. Convert legacy HWP to HWPX before candidate QA.
 
-## Template-first generation flow
+`qa_hwpx_template.py` must leave `template.json` as `candidate`, generate the
+sample/test round-trip outputs, and strictly validate them. Human review is
+required before any candidate is promoted.
 
-1. User request — e.g. "read these source files and produce a report" or "make
-   a document shaped like this example."
-2. Look up whether a template for that institution × document type already
-   exists under `templates/institutions/`.
-3. If it exists and is `approved`: the agent fills each template block with
-   content drawn from the source material.
-4. If it does not exist: extract a template candidate from a user-provided
-   example, then fill it.
-5. If no example was provided and none exists: ask the user for one before
-   generating — do not bulk-template every reference file by default.
-
-## Honesty rules
-
-- Deterministic code under `core/templates/` only produces a *candidate*.
-- A human promotes a candidate to an official `template.json`; code never
-  self-declares officialness.
-- Style is extracted only, never hardcoded. Unknown style stays `확인 필요` / null.
-- Do not claim a style is official unless it was actually extracted from the
-  reference; prose that merely describes a style is evidence, not parsed style.
-- The agent fills blocks; missing facts stay `확인 필요` and are never invented.
+Approved-template output uses
+`scripts/templates/render_hwpx_template.py`. Candidate QA and approved-template
+output are separate routes.

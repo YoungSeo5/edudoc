@@ -7,13 +7,19 @@ edudoc generates new documents from reference material and an explicit document 
 | Entry point | Role | Gongmun rules |
 |---|---|---|
 | `python main.py run <file-or-dir>` / `watch [dir]` | Shared input normalization, `DocumentModel` integrity checks when available, and optional export | Never runs Gongmun writing rules |
+| `python main.py failures` | Read-only JSON summary of runtime failures grouped by stable fingerprint | Not applicable |
 | `python scripts/gongmun/generate_from_brief.py <brief.md> --out <dir>` | Dedicated Gongmun draft generation and `gongmun_rules` validation | Yes |
 | `python scripts/public_plan/generate_from_samples.py <samples-dir>` | Public-institution plan generation from source profiles; optional render | No implicit Gongmun routing |
 | `python scripts/compose/render_plan.py --plan <plan.json> --to ...` | Renders an explicit `ComposedReport` plan | Only an explicit compose `profile_family="gongmun"` applies Gongmun policy |
+| `python scripts/templates/qa_hwpx_template.py --source <source.hwpx> ...` | Creates and round-trip validates an unapproved HWPX template candidate | Not applicable |
 
 `main.py` accepts Markdown (`.md`, `.markdown`) and HWP/HWPX (`.hwp`, `.hwpx`). HWPX is the preferred structured input; HWP is a legacy fallback. Input or output extension never determines document type or Gongmun policy.
 
-All four entry points above write one JSON file per failure to `exports/failures/` (see `exports/AGENTS.md`) — diagnostic/operational data only, never implementation evidence.
+The four document-generation entry points (`main.py run`/`watch`, Gongmun,
+public-plan, and compose) write one ignored JSON event per failure to
+`exports/failures/`. `python main.py failures` reports occurrence count and
+first/last timestamps by stable fingerprint without changing the original CLI
+errors or exit codes. See [exports/README.md](exports/README.md).
 
 ## Export status at current code
 

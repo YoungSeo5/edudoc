@@ -18,7 +18,8 @@ Project-level contract for Codex, Claude, and other coding agents. Keep this fil
 - **No inference from file format:** HWP, HWPX, PDF, DOCX, or PPTX never selects a Gongmun profile. Unknown profile families use neutral policy.
 - **DOCX default:** shared `Pipeline` and `DocxExporter()` use `DEFAULT_PUBLIC_DOCUMENT_STYLE_PROFILE`; Gongmun style requires an explicit request.
 - **HWPX-first intake:** `.hwpx` is the default structured input; `.hwp` is legacy/fallback. Do not promote HWP to the default path.
-* **Templates:** AI skills select an approved `template_id` and produce explicit `field_values`. Runtime code only resolves that ID, validates `placeholder_map.json`, replaces mapped XML locations, preserves fixed structure, and strictly validates the HWPX output. Runtime MUST NOT infer template or field meaning, invent values, or silently fall back to generic `md2hwpx`. See `docs/agent-policies/hwpx-template-rendering.md`.
+* **Templates:** AI skills select an approved template identity (`institution`, `document_type`, and `template_id`) and produce explicit `field_values`. Runtime code resolves the requested institution/document type, requires the supplied `template_id` to match the approved template, validates `placeholder_map.json`, replaces mapped XML locations, preserves fixed structure, and strictly validates the HWPX output. Runtime MUST NOT infer template or field meaning, invent values, or silently fall back to generic `md2hwpx`. See `docs/agent-policies/hwpx-template-rendering.md`.
+- **HWPX template creation requests:** when a user asks to make a template from an attached file, first follow `docs/agent-policies/hwpx-template-rendering.md` to resolve the exact attachment and check for an exact approved template. Only when that policy requires a new candidate, run `scripts/templates/qa_hwpx_template.py` against a new ignored `sandbox/` directory. Do not require the user to supply a new `template_id` or restate internal CLI or QA steps.
 - **HWPX delivery:** final HWPX must pass strict `hwpx.validate_package`; do not synthesize or remove package scaffolding simply to make a file open.
 - Protected skills (`skills/hwp/`, `skills/hwp-skill/`, `skills/rhwp-edit/`, `skills/rhwp-advanced/`, `skills/skills-main/`) are reference-only. Add edudoc-owned adapters outside `skills/`.
 
@@ -37,6 +38,8 @@ Project-level contract for Codex, Claude, and other coding agents. Keep this fil
 - Never invent missing facts, institution rules, output formats, or extracted style. Use `확인 필요`/`null` for missing facts.
 - Do not auto-install, auto-clone, change global state, call paid LLM APIs, or commit/push without approval. Keep documents out of Git except under `references/`, `samples/`, and `templates/institutions/`; use ignored `sandbox/` for unvetted files.
 - Scope changes to the request. Preserve user working-tree changes. Do not delete files without explicit approval unless this request explicitly names the file and the removal is verified safe.
+- Runtime failure records belong only in ignored `exports/failures/*.json`; never commit them or use them as implementation evidence. Review repeated failures with `python main.py failures`.
+- When the same failure fingerprint repeats, investigate the cause, add a regression test when fixed, and document only reviewed recurring or important export failures in `docs/export-status.md`. Keep an issue in `tasks/HANDOFF.md` only while it remains unresolved.
 - At completion, submit the exact validation commands, their results (including failures/warnings), and source/test evidence for behavior claims. Run focused tests first, then the requested full test command; do not hide failures or warnings.
 
 ## Documentation Changes
@@ -54,9 +57,11 @@ If the referenced policy file does not exist or cannot be read, stop the documen
 ```bash
 python main.py run samples/
 python main.py watch
+python main.py failures
 python scripts/gongmun/generate_from_brief.py <brief.md> --out exports/gongmun
 python scripts/public_plan/generate_from_samples.py <samples-dir>
 python scripts/compose/render_plan.py --plan <plan.json> --to docx,pptx,hwpx
+python scripts/templates/qa_hwpx_template.py --source <source.hwpx> --output-dir <new-candidate-dir> --institution <institution> --document-type <document-type> [--template-id <template-id>]
 python -m pytest tests/ -q
 python scripts/harness/check_dependency_policy.py
 python scripts/harness/check_hwp_priority_drift.py
