@@ -9,8 +9,6 @@ __pycache__/
 
 exports/*
 !exports/README.md
-!exports/AGENTS.md
-!exports/.gitkeep
 
 *.tmp
 *.log

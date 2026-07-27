@@ -12,3 +12,17 @@ Export is the final rendering layer. It does not choose a document type, add mis
 `Pipeline._export_status()` records the export result as `partially_stabilized`, `experimental`, `fallback`, or `failed`; `stabilized: true` for DOCX/PPTX means their tested scope is usable, not that every source layout is reproduced.
 
 For routing and boundaries, see [architecture.md](architecture.md) and [document-routing.md](document-routing.md).
+
+## Reviewed recurring failures
+
+`exports/failures/*.json` contains ignored, per-run operational records. Use
+`python main.py failures` to review each fingerprint's occurrence count,
+first-seen time, last-seen time, error code, entry point, and stage. Counts are
+calculated from the retained raw records and are not copied automatically into
+this document.
+
+Only a recurring or important failure that has been reviewed by a person belongs
+here. Record its stable error code or fingerprint, cause, resolution, prevention,
+and regression test. Do not paste raw error history, input paths, or generated
+failure JSON here. Keep unresolved next actions in `tasks/HANDOFF.md`; remove
+them from that handoff after resolution rather than accumulating history.

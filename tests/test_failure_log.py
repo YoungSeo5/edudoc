@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import main as main_cli
 from core.failure_log import (
     FailureRecord,
     failure_fingerprint,
@@ -220,6 +221,52 @@ def test_record_failure_returns_none_when_file_write_fails(
     )
 
     assert result is None
+
+
+def test_main_failures_prints_aggregated_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    failures_dir = tmp_path / "exports" / "failures"
+    for source in ("first.hwpx", "second.hwpx"):
+        record_failure(
+            failures_dir,
+            FailureRecord(
+                entry_point="compose_cli",
+                stage="render",
+                error_code="institution_template_not_found",
+                source=source,
+                error=f"missing: {source}",
+            ),
+        )
+    record_failure(
+        failures_dir,
+        FailureRecord(
+            entry_point="pipeline",
+            stage="convert",
+            error_code="converter_not_found",
+            source="unknown.xyz",
+            error="unsupported",
+        ),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = main_cli.main(["main.py", "failures"])
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert len(payload) == 2
+    repeated = next(
+        item
+        for item in payload
+        if item["error_code"] == "institution_template_not_found"
+    )
+    assert repeated["occurrence_count"] == 2
+    assert repeated["entry_point"] == "compose_cli"
+    assert repeated["stage"] == "render"
+    assert repeated["first_seen"] <= repeated["last_seen"]
+    assert len(repeated["fingerprint"]) == 64
 
 
 if __name__ == "__main__":

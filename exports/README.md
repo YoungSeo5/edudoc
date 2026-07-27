@@ -1,4 +1,24 @@
-# samples/
+# exports/
 
-로컬 테스트용 입력 문서를 여기에 둔다. (형식 무관 - 지금은 .hwp/.hwpx 지원)
-`python main.py run samples/` 또는 `python main.py watch` 로 처리.
+`exports/` is the ignored runtime-output directory for generated Markdown,
+rendered documents, export metadata, template candidates, and failure records.
+Its generated contents are operational artifacts, not source or reference
+material, and must not be committed or used as implementation evidence.
+
+Failure events are written under `exports/failures/*.json` with:
+
+- `timestamp`
+- `entry_point`
+- `stage`
+- `error_code`
+- `fingerprint`
+- `source`
+- `error`
+- `meta`
+
+`python main.py failures` reads those files and prints a JSON summary grouped
+by stable fingerprint. Logging and aggregation do not replace the existing
+`ExportResult.error`, CLI JSON/stderr output, or exit codes.
+
+Source inputs belong in `samples/` or `references/`. Approved institution
+templates belong in `templates/institutions/`.

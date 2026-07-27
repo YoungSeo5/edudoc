@@ -4,6 +4,7 @@ edudoc Phase 0 진입점.
 사용법:
   python main.py run <파일_또는_폴더> [--export docx,pdf]
   python main.py watch [감시폴더] [--export docx,pdf]
+  python main.py failures
 
 검증:
   범용 run/watch는 문서 유형별 작성 규칙 검증을 실행하지 않습니다.
@@ -14,12 +15,15 @@ edudoc Phase 0 진입점.
   python main.py run samples/report.hwpx
   python main.py run samples/draft.md --export docx,pdf
   python main.py watch
+  python main.py failures
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
+from core.failure_log import DEFAULT_FAILURES_DIR, summarize_failures
 from core.input_filter import is_processable_input
 from core.pipeline import Pipeline, PipelineConfig
 
@@ -93,6 +97,18 @@ def cmd_watch(folder: Path, pipeline: Pipeline) -> int:
     return 0
 
 
+def cmd_failures(failures_dir: Path = DEFAULT_FAILURES_DIR) -> int:
+    summaries = summarize_failures(failures_dir)
+    print(
+        json.dumps(
+            [summary.to_dict() for summary in summaries],
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if any(argument in {"-h", "--help"} for argument in argv[1:]):
         print(__doc__)
@@ -116,6 +132,9 @@ def main(argv: list[str]) -> int:
     if unsupported_option is not None:
         print(f"지원하지 않는 옵션: {unsupported_option}", file=sys.stderr)
         return 2
+    if command == "failures":
+        return cmd_failures()
+
     pipeline = Pipeline(config=PipelineConfig(
         output_dir=Path("exports"),
         write_validation_report=True,
