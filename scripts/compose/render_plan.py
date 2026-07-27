@@ -26,7 +26,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from core.adapters.hwpx_template_renderer import load_content_fields  # noqa: E402
+from core.adapters.hwpx_template_renderer import (  # noqa: E402
+    HwpxTemplateRenderError,
+    load_template_content,
+)
 from core.compose.render import (  # noqa: E402
     load_plan,
     render_report_to_docx,
@@ -80,8 +83,8 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
     template_content = None
     if has_all_institution_options:
         try:
-            template_content = load_content_fields(args.template_content)
-        except (OSError, json.JSONDecodeError) as exc:
+            template_content = load_template_content(args.template_content)
+        except (OSError, json.JSONDecodeError, HwpxTemplateRenderError) as exc:
             parser.error(f"cannot read --template-content {args.template_content}: {exc}")
 
     report = load_plan(args.plan)

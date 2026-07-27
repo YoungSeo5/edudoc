@@ -4,7 +4,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from core.adapters.hwpx_template_renderer import HwpxTemplateRenderError, render_hwpx_template
+from core.adapters.hwpx_template_renderer import (
+    HwpxTemplateRenderError,
+    TemplateContent,
+    render_hwpx_template,
+)
 from core.exporters.docx_exporter import DocxExporter
 from core.exporters.export_base import ExportResult
 from core.exporters.hwpx_via_hwpskill import HwpxViaHwpSkillExporter
@@ -40,7 +44,7 @@ def render_report_to_hwpx(
     profile_family: str | None = None,
     institution: str | None = None,
     document_type: str | None = None,
-    template_content: dict[str, object] | None = None,
+    template_content: TemplateContent | None = None,
 ):
     """Validate -> clean Markdown -> HWPX. Returns (problems, export_result).
 
@@ -90,8 +94,21 @@ def render_report_to_hwpx(
             "available": True,
             "template_id": candidate.identity.template_id,
         }
+        if template_content.template_id != candidate.identity.template_id:
+            return problems, ExportResult(
+                source=markdown_path,
+                output=hwpx_path,
+                ok=False,
+                error=(
+                    "template_id mismatch: "
+                    f"content={template_content.template_id!r}, "
+                    f"approved={candidate.identity.template_id!r}"
+                ),
+                meta=template_meta,
+                error_code="institution_template_id_mismatch",
+            )
         try:
-            render_result = render_hwpx_template(template_dir, template_content, hwpx_path)
+            render_result = render_hwpx_template(template_dir, template_content.fields, hwpx_path)
         except HwpxTemplateRenderError as exc:
             return problems, ExportResult(
                 source=markdown_path,

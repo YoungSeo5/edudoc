@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from core.adapters.hwpx_template_renderer import TemplateContent
 from core.exporters.export_base import ExportResult
 from scripts.compose import render_plan
 
@@ -44,7 +45,12 @@ def test_render_plan_cli_passes_institution_options_to_hwpx_renderer(
     plan = _write_plan(tmp_path)
     content_path = tmp_path / "content.json"
     content_path.write_text(
-        json.dumps({"template_id": "example", "fields": {"report_title": "기관 보고서"}}),
+        json.dumps(
+            {
+                "template_id": "fss_virtual_asset_report",
+                "fields": {"report_title": "기관 보고서"},
+            }
+        ),
         encoding="utf-8",
     )
     received_kwargs = []
@@ -84,7 +90,10 @@ def test_render_plan_cli_passes_institution_options_to_hwpx_renderer(
         {
             "institution": "금융감독원",
             "document_type": "금감원 원장보고 가상자산",
-            "template_content": {"report_title": "기관 보고서"},
+            "template_content": TemplateContent(
+                template_id="fss_virtual_asset_report",
+                fields={"report_title": "기관 보고서"},
+            ),
         }
     ]
 

@@ -3,7 +3,8 @@
 Deterministic. Reads the template's ``placeholder_map.json`` +
 ``template/section*.template.xml``, replaces each ``{{field_id}}`` (kept inside its
 ``<hp:t>``) with the XML-escaped content value, then writes the filled sections into
-a byte-perfect copy of the *base* HWPX (only ``Contents/section*.xml`` change).
+a byte-preserving copy of the *base* HWPX. Filled sections change, and a missing
+Hancom ``hwpunitchar`` root declaration is restored when strict validation requires it.
 Changed sections discard ``hp:linesegarray`` caches so Hancom recalculates the
 new text layout instead of reusing character positions from the sample content.
 
@@ -24,15 +25,26 @@ import json
 import re
 import shutil
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypeAlias
 from xml.sax.saxutils import escape
+
+JsonScalar: TypeAlias = str | int | float | bool | None
+JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 
 _PLACEHOLDER_RE = re.compile(r"\{\{([A-Za-z0-9_]+)\}\}")
 _SECTION_TEMPLATE_RE = re.compile(r"^section(\d+)\.template\.xml$", re.IGNORECASE)
+_SECTION_PART_RE = re.compile(r"^Contents/section\d+\.xml$", re.IGNORECASE)
 _LINESEGARRAY_RE = re.compile(
     r"<hp:linesegarray\b[^>]*/>|<hp:linesegarray\b[^>]*>.*?</hp:linesegarray>",
     re.DOTALL,
+)
+_HWPUNITCHAR_DECLARATION_RE = re.compile(br"\bxmlns:hwpunitchar\s*=")
+_HWPML_ROOT_START_RE = re.compile(br"<(?:[A-Za-z_][\w.-]*:)?(?:head|sec)\b")
+_HWPUNITCHAR_DECLARATION = (
+    b'xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar"'
 )
 
 UNKNOWN = "확인 필요"
@@ -40,6 +52,14 @@ UNKNOWN = "확인 필요"
 
 class HwpxTemplateRenderError(RuntimeError):
     """Raised when a template cannot be rendered."""
+
+
+@dataclass(frozen=True, slots=True)
+class TemplateContent:
+    """Explicit field values bound to one approved template identity."""
+
+    template_id: str
+    fields: dict[str, JsonValue]
 
 
 @dataclass
@@ -60,7 +80,7 @@ class RenderResult:
 
 def fill_template_sections(
     template_dir: Path | str,
-    content: dict[str, object],
+    content: Mapping[str, JsonValue],
     *,
     on_missing: str = "keep",
 ) -> tuple[dict[str, str], RenderResult]:
@@ -115,7 +135,7 @@ def fill_template_sections(
 
 def render_hwpx_template(
     template_dir: Path | str,
-    content: dict[str, object],
+    content: Mapping[str, JsonValue],
     output_path: Path | str,
     *,
     base_hwpx: Path | str | None = None,
@@ -127,7 +147,8 @@ def render_hwpx_template(
     The base package is ``base_hwpx`` if given, otherwise the self-contained
     ``<template_dir>/source.hwpx`` snapshot. Only ``Contents/section*.xml`` change;
     every other entry (mimetype, version.xml, Preview/…, styles, BinData) is copied
-    byte-for-byte — so a self-contained template renders with no external file.
+    byte-for-byte, except that a missing required ``hwpunitchar`` root namespace is
+    restored in header/section XML. A self-contained template needs no external file.
 
     ``validate`` (default True) runs strict HWPX package validation on the output
     and raises if it does not pass — a file that only opens in Hancom is not enough.
@@ -151,6 +172,11 @@ def render_hwpx_template(
             if info.filename in filled_sections:
                 data = filled_sections[info.filename].encode("utf-8")
                 replaced.add(info.filename)
+            if (
+                info.filename == "Contents/header.xml"
+                or _SECTION_PART_RE.fullmatch(info.filename)
+            ):
+                data = _ensure_hwpunitchar_namespace(data)
             zout.writestr(info, data)
 
     unmatched = sorted(set(filled_sections) - replaced)
@@ -200,10 +226,24 @@ def snapshot_source_hwpx(source_hwpx: Path | str, template_dir: Path | str) -> P
     return destination
 
 
-def load_content_fields(content_json: Path | str) -> dict[str, object]:
-    """Read a content.json ({template_id, fields:{...}}) and return its ``fields`` mapping."""
-    data = json.loads(Path(content_json).read_text(encoding="utf-8"))
-    return dict(data.get("fields", data))
+def load_template_content(content_json: Path | str) -> TemplateContent:
+    """Parse a content.json and retain its template identity."""
+    source = Path(content_json)
+    data: JsonValue = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise HwpxTemplateRenderError(f"content JSON root must be an object: {source}")
+    template_id = data.get("template_id")
+    fields = data.get("fields")
+    if not isinstance(template_id, str) or not template_id:
+        raise HwpxTemplateRenderError(f"content JSON requires a non-empty template_id: {source}")
+    if not isinstance(fields, dict):
+        raise HwpxTemplateRenderError(f"content JSON requires a fields object: {source}")
+    return TemplateContent(template_id=template_id, fields=dict(fields))
+
+
+def load_content_fields(content_json: Path | str) -> dict[str, JsonValue]:
+    """Read a content.json and return a mutable copy of its ``fields`` mapping."""
+    return dict(load_template_content(content_json).fields)
 
 
 def _load_placeholder_map(template_dir: Path) -> dict:
@@ -213,7 +253,12 @@ def _load_placeholder_map(template_dir: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _fill_xml(xml: str, content: dict[str, object], filled: set[str], missing: set[str]) -> str:
+def _fill_xml(
+    xml: str,
+    content: Mapping[str, JsonValue],
+    filled: set[str],
+    missing: set[str],
+) -> str:
     def replace(match: re.Match) -> str:
         field_id = match.group(1)
         value = content.get(field_id)
@@ -224,3 +269,13 @@ def _fill_xml(xml: str, content: dict[str, object], filled: set[str], missing: s
         return match.group(0)  # keep {{field_id}} unfilled (never invented)
 
     return _PLACEHOLDER_RE.sub(replace, xml)
+
+
+def _ensure_hwpunitchar_namespace(payload: bytes) -> bytes:
+    if _HWPUNITCHAR_DECLARATION_RE.search(payload):
+        return payload
+    return _HWPML_ROOT_START_RE.sub(
+        lambda match: match.group(0) + b" " + _HWPUNITCHAR_DECLARATION,
+        payload,
+        count=1,
+    )

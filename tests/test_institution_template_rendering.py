@@ -10,9 +10,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.adapters.hwpx_template_renderer import load_content_fields
+from core.adapters.hwpx_template_renderer import TemplateContent, load_template_content
 from core.compose.render import render_report_to_hwpx
 from core.compose.report import Block, ComposedReport, Section
+from scripts.compose import render_plan
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = ROOT / "templates" / "institutions"
@@ -25,7 +26,7 @@ def test_compose_uses_requested_institution_template_when_content_is_complete() 
         title="가상자산 이상거래 관련 현황 점검 진행상황",
         sections=[Section(no="1", title="현황", blocks=[Block(marker="□", text="점검 중")])],
     )
-    content = load_content_fields(FSS_VIRTUAL_ASSET / "content.sample.json")
+    content = load_template_content(FSS_VIRTUAL_ASSET / "content.sample.json")
 
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "report.hwpx"
@@ -41,6 +42,45 @@ def test_compose_uses_requested_institution_template_when_content_is_complete() 
     assert result.ok, result.error
     assert result.meta["engine"] == "institution_template"
     assert result.meta["template_id"] == "fss_virtual_asset_report"
+
+
+def test_compose_cli_rejects_content_for_a_different_template(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plan = tmp_path / "report.plan.json"
+    plan.write_text(
+        json.dumps({"title": "기관 템플릿 식별 검증", "sections": []}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    content = json.loads((FSS_VIRTUAL_ASSET / "content.sample.json").read_text(encoding="utf-8"))
+    content["template_id"] = "different_template"
+    content_path = tmp_path / "content.json"
+    content_path.write_text(json.dumps(content, ensure_ascii=False), encoding="utf-8")
+
+    exit_code = render_plan.main(
+        [
+            "--plan",
+            str(plan),
+            "--to",
+            "hwpx",
+            "--out",
+            str(tmp_path),
+            "--institution",
+            "금융감독원",
+            "--document-type",
+            "금감원 원장보고 가상자산",
+            "--template-content",
+            str(content_path),
+        ],
+        failures_dir=tmp_path / "failures",
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert summary["outputs"][0]["ok"] is False
+    assert "template_id mismatch" in summary["outputs"][0]["error"]
+    assert not (tmp_path / "report.hwpx").exists()
 
 
 @pytest.mark.parametrize(
@@ -64,7 +104,7 @@ def test_compose_requires_complete_institution_template_identity(
                 Path(tmp) / "report.hwpx",
                 institution=institution,
                 document_type=document_type,
-                template_content={},
+                template_content=TemplateContent(template_id="fss_virtual_asset_report", fields={}),
             )
 
 
@@ -96,7 +136,7 @@ def test_compose_returns_failure_when_institution_template_is_not_registered() -
             output,
             institution="등록되지 않은 기관",
             document_type="등록되지 않은 문서",
-            template_content={},
+            template_content=TemplateContent(template_id="unregistered_template", fields={}),
         )
 
     assert problems == []

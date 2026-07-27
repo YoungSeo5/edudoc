@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from core.adapters.hwpx_template_renderer import (  # noqa: E402
+    HwpxTemplateRenderError,
+    load_template_content,
+    render_hwpx_template,
+)
+from core.templates.registry import TemplateRegistry  # noqa: E402
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="승인된 기관 템플릿에 content.json을 채워 HWPX를 생성합니다."
+    )
+    parser.add_argument("--institution", required=True, help="기관명")
+    parser.add_argument("--document-type", required=True, help="문서 유형")
+    parser.add_argument("--content", required=True, type=Path, help="템플릿 content.json")
+    parser.add_argument("--output", required=True, type=Path, help="출력 HWPX")
+    args = parser.parse_args(argv)
+
+    registry = TemplateRegistry(ROOT / "templates" / "institutions")
+    template_id: str | None = None
+    try:
+        content = load_template_content(args.content)
+        template_id = content.template_id
+        candidate = registry.find(args.institution, args.document_type)
+        if candidate is None:
+            raise HwpxTemplateRenderError(
+                "approved institution template not found: "
+                f"{args.institution} / {args.document_type}"
+            )
+        if content.template_id != candidate.identity.template_id:
+            raise HwpxTemplateRenderError(
+                "template_id mismatch: "
+                f"content={content.template_id!r}, "
+                f"approved={candidate.identity.template_id!r}"
+            )
+        template_dir = registry.template_path(
+            args.institution, args.document_type
+        ).parent
+        result = render_hwpx_template(template_dir, content.fields, args.output)
+    except (
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+        HwpxTemplateRenderError,
+    ) as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "institution": args.institution,
+                    "document_type": args.document_type,
+                    "template_id": template_id,
+                    "output": None,
+                    "error": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 1
+
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "institution": args.institution,
+                "document_type": args.document_type,
+                "template_id": content.template_id,
+                "output": str(result.output),
+                "filled_fields": result.filled_fields,
+                "missing_fields": result.missing_fields,
+                "leftover_placeholders": result.leftover_placeholders,
+                "error": None,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

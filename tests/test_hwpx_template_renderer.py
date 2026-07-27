@@ -229,6 +229,52 @@ def test_render_validates_output_by_default() -> None:
         validate_hwpx_output(out)  # explicit: no error means strict validation passed
 
 
+def test_render_repairs_missing_hwpunitchar_root_namespace(tmp_path: Path) -> None:
+    declaration = (
+        b' xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar"'
+    )
+    broken_base = tmp_path / "missing-namespace.hwpx"
+    with zipfile.ZipFile(BROTHER_HWPX) as source, zipfile.ZipFile(
+        broken_base,
+        "w",
+    ) as destination:
+        for info in source.infolist():
+            payload = source.read(info.filename)
+            if info.filename == "Contents/header.xml" or re.fullmatch(
+                r"Contents/section\d+\.xml",
+                info.filename,
+            ):
+                payload = payload.replace(declaration, b"")
+            destination.writestr(info, payload)
+
+    broken_validation = hwpx.validate_package(broken_base)
+    assert not broken_validation.ok
+    assert any("hwpunitchar" in issue.message for issue in broken_validation.errors)
+
+    section0 = zipfile.ZipFile(broken_base).read("Contents/section0.xml").decode("utf-8")
+    target = next(t for t in re.findall(r"<hp:t>([^<]+)</hp:t>", section0) if t.strip())
+    template_xml = section0.replace(
+        f"<hp:t>{target}</hp:t>",
+        "<hp:t>{{demo_field}}</hp:t>",
+        1,
+    )
+    template_dir = _write_template_dir(tmp_path / "candidate", template_xml, "demo_field")
+    output = tmp_path / "rendered.hwpx"
+
+    render_hwpx_template(
+        template_dir,
+        {"demo_field": "RENDER_OK"},
+        output,
+        base_hwpx=broken_base,
+    )
+
+    validation = hwpx.validate_package(output)
+    assert validation.ok
+    with zipfile.ZipFile(output) as package:
+        assert declaration.strip() in package.read("Contents/header.xml")
+        assert declaration.strip() in package.read("Contents/section0.xml")
+
+
 def test_render_without_any_base_raises() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), "<hp:p><hp:t>{{x}}</hp:t></hp:p>", "x")
