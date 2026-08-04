@@ -387,6 +387,13 @@ def render_hwpx_template(
         raise HwpxTemplateRenderError(
             f"no base HWPX: pass base_hwpx or add a self-contained {template_dir / 'source.hwpx'}"
         )
+    same_file = base.resolve() == output_path.resolve()
+    if not same_file and output_path.exists():
+        same_file = os.path.samefile(base, output_path)
+    if same_file:
+        raise HwpxTemplateRenderError(
+            "output_path must not reference the source HWPX"
+        )
 
     _validate_on_missing(on_missing)
     placeholder_map = _load_placeholder_map(template_dir)
