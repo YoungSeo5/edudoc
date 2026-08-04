@@ -21,8 +21,8 @@ Honesty:
   ``unknown_keys`` rather than dropped.
 - Any ``{{...}}`` still present after filling is reported as a leftover placeholder.
 - ``Contents/content.hpf`` gets fresh created/modified stamps on every render.
-  The FSS director report uses its execution context and source content for the
-  nine declared metadata values; other templates retain the existing title/date flow.
+  The FSS input adapter prepares its nine metadata values before rendering;
+  other templates retain the existing title/date flow.
 - The FSS director report rebuilds ``Preview/PrvText.txt`` from the final leaf
   paragraphs after mapped table cells have been filled.
 - The output is validated with strict HWPX package validation before it is returned
@@ -51,10 +51,22 @@ from xml.sax.saxutils import escape
 
 from fontTools.ttLib import TTFont
 
-from .hwpx_alias_map import AliasMap, RepeatBlock, flatten, load_alias_map
+from .hwpx_alias_map import AliasMap, RepeatBlock
+from .hwpx_fss_director_report import (
+    FSS_META_NAMES,
+    FssDirectorReportInputError,
+    FssPackageMetadata,
+)
 from .hwpx_table_fill_adapter import (
     HwpxTableCellFill,
     fill_hwpx_table_cells,
+)
+from .hwpx_template_input import (
+    HwpxTemplateInputError,
+    PreparedRenderContent,
+    ResolvedRenderContent,
+    prepare_hwpx_template_input,
+    resolve_hwpx_template_input,
 )
 
 JsonScalar: TypeAlias = str | int | float | bool | None
@@ -77,17 +89,6 @@ _HPF_PART = "Contents/content.hpf"
 _FSS_SECTION_PART = "Contents/section0.xml"
 _FSS_PREVIEW_TEXT_PART = "Preview/PrvText.txt"
 _HPF_TITLE_RE = re.compile(r"<opf:title(?:\s*/>|>.*?</opf:title>)", re.DOTALL)
-_FSS_TEMPLATE_ID = "fss_director_report"
-_FSS_META_NAMES = (
-    "creator",
-    "subject",
-    "description",
-    "lastsaveby",
-    "date",
-    "keyword",
-    "CreatedDate",
-    "ModifiedDate",
-)
 _HWPUNITCHAR_DECLARATION_RE = re.compile(br"\bxmlns:hwpunitchar\s*=")
 _HWPML_ROOT_START_RE = re.compile(br"<(?:[A-Za-z_][\w.-]*:)?(?:head|sec)\b")
 _HWPUNITCHAR_DECLARATION = (
@@ -119,18 +120,6 @@ class RenderExecutionContext:
             raise HwpxTemplateRenderError(
                 "execution context requested_at must be a UTC datetime"
             )
-
-
-@dataclass(frozen=True, slots=True)
-class FssPackageMetadata:
-    title: str
-    creator: str
-    subject: str
-    description: str
-    lastsaveby: str
-    report_date: str
-    keywords: str
-    requested_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,16 +171,15 @@ def fill_template_sections(
     """
     template_dir = Path(template_dir)
     _validate_on_missing(on_missing)
-    placeholder_map = _load_placeholder_map(template_dir)
-    content, unknown_keys, _ = _resolve_content(template_dir, placeholder_map, content)
-    field_ids = frozenset(
-        entry["field_id"] for entry in placeholder_map.get("fields", [])
-    )
-    alias_map = load_alias_map(
-        template_dir,
-        field_ids=field_ids,
-        template_id=placeholder_map.get("template_id"),
-    )
+    resolved = resolve_hwpx_template_input(template_dir, content)
+    return _fill_resolved_template_sections(template_dir, resolved, on_missing)
+
+
+def _fill_resolved_template_sections(
+    template_dir: Path,
+    content: ResolvedRenderContent,
+    on_missing: str,
+) -> tuple[dict[str, str], RenderResult]:
     filled: set[str] = set()
     missing: set[str] = set()
 
@@ -199,17 +187,30 @@ def fill_template_sections(
     template_files = sorted((template_dir / "template").glob("section*.template.xml"))
     if not template_files:
         raise HwpxTemplateRenderError(f"no template/section*.template.xml in {template_dir}")
-    if alias_map is not None:
-        _validate_fit_constraints(template_dir, content, alias_map)
+    if content.alias_map is not None:
+        _validate_fit_constraints(
+            template_dir,
+            content.field_values,
+            content.alias_map,
+        )
     for template_file in template_files:
         match = _SECTION_TEMPLATE_RE.fullmatch(template_file.name)
         if match is None:
             continue
         internal = f"Contents/section{int(match.group(1))}.xml"
         xml = template_file.read_text(encoding="utf-8")
-        filled_xml, repeat_filled = render_repeat_block(xml, content, alias_map)
+        filled_xml, repeat_filled = render_repeat_block(
+            xml,
+            content.repeat_values,
+            content.alias_map,
+        )
         filled.update(repeat_filled)
-        filled_xml = _fill_xml(filled_xml, content, filled, missing)
+        filled_xml = _fill_xml(
+            filled_xml,
+            content.field_values,
+            filled,
+            missing,
+        )
         if filled_xml != xml:
             filled_xml = _LINESEGARRAY_RE.sub("", filled_xml)
         filled_sections[internal] = filled_xml
@@ -239,7 +240,7 @@ def fill_template_sections(
         filled_fields=sorted(filled),
         missing_fields=sorted(missing),
         leftover_placeholders=leftover,
-        unknown_keys=unknown_keys,
+        unknown_keys=list(content.unknown_keys),
     )
     return filled_sections, result
 
@@ -383,6 +384,64 @@ def render_hwpx_template(
     template_dir = Path(template_dir)
     output_path = Path(output_path)
     base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
+    _validate_render_paths(template_dir, base, output_path)
+    requester_name = (
+        execution_context.requester_name
+        if execution_context is not None
+        else None
+    )
+    requested_at = (
+        execution_context.requested_at
+        if execution_context is not None
+        else None
+    )
+    try:
+        prepared = prepare_hwpx_template_input(
+            template_dir,
+            content,
+            requester_name=requester_name,
+            requested_at=requested_at,
+        )
+    except (FssDirectorReportInputError, HwpxTemplateInputError) as exc:
+        raise HwpxTemplateRenderError(str(exc)) from exc
+    return _render_prepared_hwpx_template(
+        template_dir,
+        prepared,
+        output_path,
+        base,
+        on_missing=on_missing,
+        validate=validate,
+    )
+
+
+def render_prepared_hwpx_template(
+    template_dir: Path | str,
+    content: PreparedRenderContent,
+    output_path: Path | str,
+    *,
+    base_hwpx: Path | str | None = None,
+    on_missing: str = "keep",
+    validate: bool = True,
+) -> RenderResult:
+    template_dir = Path(template_dir)
+    output_path = Path(output_path)
+    base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
+    _validate_render_paths(template_dir, base, output_path)
+    return _render_prepared_hwpx_template(
+        template_dir,
+        content,
+        output_path,
+        base,
+        on_missing=on_missing,
+        validate=validate,
+    )
+
+
+def _validate_render_paths(
+    template_dir: Path,
+    base: Path,
+    output_path: Path,
+) -> None:
     if not base.is_file() or not zipfile.is_zipfile(base):
         raise HwpxTemplateRenderError(
             f"no base HWPX: pass base_hwpx or add a self-contained {template_dir / 'source.hwpx'}"
@@ -395,41 +454,41 @@ def render_hwpx_template(
             "output_path must not reference the source HWPX"
         )
 
+
+def _render_prepared_hwpx_template(
+    template_dir: Path,
+    content: PreparedRenderContent,
+    output_path: Path,
+    base: Path,
+    *,
+    on_missing: str,
+    validate: bool,
+) -> RenderResult:
     _validate_on_missing(on_missing)
-    placeholder_map = _load_placeholder_map(template_dir)
-    source_content = content
-    # resolve aliases once here; fill_template_sections re-resolves the already
-    # field_id-keyed mapping as a no-op, so unknown keys are captured only once
-    content, unknown_keys, title_field_id = _resolve_content(
-        template_dir, placeholder_map, content
+    document_title = (
+        content.field_values.get(content.title_field_id)
+        if content.title_field_id
+        else None
     )
-    fss_metadata: FssPackageMetadata | None = None
-    if placeholder_map.get("template_id") == _FSS_TEMPLATE_ID:
-        if execution_context is None:
-            raise HwpxTemplateRenderError(
-                "fss_director_report requires execution_context"
-            )
-        fss_metadata = _build_fss_package_metadata(
-            source_content,
-            execution_context,
-        )
-    document_title = content.get(title_field_id) if title_field_id else None
     if not isinstance(document_title, str) or not document_title:
         document_title = None
     table_fills, table_filled, table_missing = _table_cell_fills(
         template_dir,
-        placeholder_map,
-        content,
+        content.placeholder_map,
+        content.field_values,
         on_missing=on_missing,
     )
     if on_missing == "error" and table_missing:
         raise HwpxTemplateRenderError(
             f"missing content for fields: {sorted(table_missing)}"
         )
-    filled_sections, result = fill_template_sections(template_dir, content, on_missing=on_missing)
+    filled_sections, result = _fill_resolved_template_sections(
+        template_dir,
+        content,
+        on_missing,
+    )
     result.filled_fields = sorted(set(result.filled_fields) | table_filled)
     result.missing_fields = sorted(set(result.missing_fields) | table_missing)
-    result.unknown_keys = unknown_keys
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     _write_rendered_package(
@@ -437,12 +496,12 @@ def render_hwpx_template(
         output_path,
         _PackageContent(
             sections=filled_sections,
-            fss_metadata=fss_metadata,
+            fss_metadata=content.package_metadata,
             document_title=document_title,
         ),
     )
     _apply_table_fills(output_path, table_fills)
-    if fss_metadata is not None:
+    if content.package_metadata is not None:
         _refresh_fss_preview_text(output_path)
     if validate:
         validate_hwpx_output(output_path)
@@ -507,13 +566,6 @@ def load_content_fields(content_json: Path | str) -> dict[str, JsonValue]:
     return dict(load_template_content(content_json).fields)
 
 
-def _load_placeholder_map(template_dir: Path) -> dict:
-    path = template_dir / "placeholder_map.json"
-    if not path.is_file():
-        raise HwpxTemplateRenderError(f"placeholder_map.json not found in {template_dir}")
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
 def _validate_on_missing(on_missing: str) -> None:
     if on_missing not in ON_MISSING_MODES:
         raise HwpxTemplateRenderError(
@@ -562,89 +614,6 @@ def _update_content_hpf(data: bytes, title: str | None) -> bytes:
     return xml.encode("utf-8")
 
 
-def _fss_input_string(
-    flattened: Mapping[str, JsonValue],
-    paths: tuple[str, ...],
-    *,
-    required: bool,
-) -> str:
-    path = next((candidate for candidate in paths if candidate in flattened), paths[0])
-    value = flattened.get(path)
-    if value is None and not required:
-        return ""
-    if not isinstance(value, str) or (required and not value.strip()):
-        requirement = "a non-empty string" if required else "a string"
-        raise HwpxTemplateRenderError(
-            f"fss metadata input {path!r} must be {requirement}"
-        )
-    return value
-
-
-def _build_fss_package_metadata(
-    source_content: Mapping[str, JsonValue],
-    context: RenderExecutionContext,
-) -> FssPackageMetadata:
-    flattened = flatten(source_content)
-    body = source_content.get("본문", source_content.get("content_01"))
-    if "본문" in source_content and not isinstance(body, list):
-        raise HwpxTemplateRenderError("fss metadata input '본문' must be an array")
-
-    level_zero_titles: list[str] = []
-    if isinstance(body, list):
-        for index, item in enumerate(body):
-            if not isinstance(item, list) or len(item) != 2:
-                raise HwpxTemplateRenderError(
-                    f"fss metadata input '본문[{index}]' must be [level, text]"
-                )
-            if item[0] != 0:
-                continue
-            text = item[1]
-            if not isinstance(text, str):
-                raise HwpxTemplateRenderError(
-                    f"fss metadata input '본문[{index}]' text must be a string"
-                )
-            level_zero_titles.append(text)
-
-    report_type = _fss_input_string(
-        flattened,
-        ("보고구분",),
-        required=False,
-    )
-    department = _fss_input_string(
-        flattened,
-        ("담당.국", "department_name_01"),
-        required=False,
-    )
-    department_label = f"{department}국" if department else ""
-    keywords = ", ".join(
-        value
-        for value in (report_type, department_label, *level_zero_titles)
-        if value
-    )
-    return FssPackageMetadata(
-        title=_fss_input_string(
-            flattened,
-            ("제목", "document_title_01"),
-            required=True,
-        ),
-        creator=context.requester_name,
-        subject=", ".join(level_zero_titles),
-        description=_fss_input_string(
-            flattened,
-            ("결론", "conclusion_01"),
-            required=False,
-        ),
-        lastsaveby=context.requester_name,
-        report_date=_fss_input_string(
-            flattened,
-            ("보고일", "date_01"),
-            required=True,
-        ),
-        keywords=keywords,
-        requested_at=context.requested_at,
-    )
-
-
 def _replace_single_fss_meta(xml: str, name: str, value: str) -> str:
     pattern = re.compile(
         rf'(<opf:meta\b(?=[^>]*\bname="{re.escape(name)}")[^>]*?)'
@@ -688,36 +657,9 @@ def _update_fss_content_hpf(
         stamp,
         stamp,
     )
-    for name, value in zip(_FSS_META_NAMES, values, strict=True):
+    for name, value in zip(FSS_META_NAMES, values, strict=True):
         xml = _replace_single_fss_meta(xml, name, value)
     return xml.encode("utf-8")
-
-
-def _resolve_content(
-    template_dir: Path,
-    placeholder_map: dict,
-    content: Mapping[str, JsonValue],
-) -> tuple[dict[str, JsonValue], list[str], str | None]:
-    """Key the content by ``field_id`` through the template's alias map.
-
-    Also reports the ``field_id`` the alias map declares as the document title
-    (``None`` when the template declares none).
-
-    A template without ``alias_map.json`` keeps the field_id-only behavior
-    unchanged, including not reporting unknown keys.
-    """
-    field_ids = frozenset(
-        entry["field_id"] for entry in placeholder_map.get("fields", [])
-    )
-    alias_map = load_alias_map(
-        template_dir,
-        field_ids=field_ids,
-        template_id=placeholder_map.get("template_id"),
-    )
-    if alias_map is None:
-        return dict(content), [], None
-    resolved, unknown = alias_map.resolve(content, field_ids)
-    return resolved, unknown, alias_map.title_field_id
 
 
 def _missing_fallback(
