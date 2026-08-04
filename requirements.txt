@@ -15,6 +15,7 @@ markdown-it-py       # Markdown 공통 블록 파싱 (모든 exporter 공유)
 python-docx          # -> DOCX
 reportlab            # -> PDF (한글 시스템 폰트 등록 필요)
 python-pptx          # -> PPTX
+fonttools            # HWPX 한 줄 제약에서 원본 TTF 글자 폭 측정
 # HWPX 출력은 위 python-hwpx 로 생성
 # Pandoc/typst 는 pip 대상 아님 - 선택 fallback(고충실도/비교). 기본 흐름은 위 pip 패키지만으로 동작.
 

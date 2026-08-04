@@ -45,8 +45,15 @@ own. Rendering therefore needs a complete base package.
 
 `source.hwpx` is a byte-perfect copy of the original reference HWPX, stored so
 the template is **self-contained**: `core.adapters.hwpx_template_renderer`
-renders (replacing only `Contents/section*.xml`) with no external file, and the
-output passes strict package validation identically to the original.
+renders with no external file, and the output passes strict package validation.
+It rewrites `Contents/section*.xml`, refreshes the created/modified stamps in
+`Contents/content.hpf` (plus `<opf:title>` when `alias_map.json` declares a
+`title_field`), and restores the required `hwpunitchar` root namespace in
+`Contents/header.xml` and the section parts when the original omits it. An
+original that fails strict validation only for that missing namespace therefore
+still renders a passing output. The FSS director report also rebuilds
+`Preview/PrvText.txt` from the final leaf paragraphs after table-cell filling.
+Every other entry is copied byte-for-byte.
 
 Templates extracted with the current
 `core.templates.hwpx_content_separator` snapshot `source.hwpx` automatically.

@@ -11,6 +11,7 @@ import re
 import sys
 import tempfile
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -18,11 +19,14 @@ import hwpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from core.adapters.hwpx_alias_map import AliasMap, RepeatBlock
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
+    RenderExecutionContext,
     fill_template_sections,
     load_content_fields,
     render_hwpx_template,
+    render_repeat_block,
     snapshot_source_hwpx,
     validate_hwpx_output,
 )
@@ -35,6 +39,10 @@ REGISTERED_FSS_DIRS = (
     ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원페이지",
 )
 BROTHER_HWPX = ROOT / "references" / "document-types" / "public-plan" / "브라더 공공기관 보고서 양식.hwpx"
+EXECUTION_CONTEXT = RenderExecutionContext(
+    "테스트 요청자",
+    datetime(2026, 8, 3, tzinfo=timezone.utc),
+)
 
 
 def test_fill_fss_full_content_has_no_leftover() -> None:
@@ -154,7 +162,12 @@ def test_registered_fss_templates_render_text_shapes_without_placeholders() -> N
             with tempfile.TemporaryDirectory() as tmp:
                 output = Path(tmp) / f"rendered-{index}.hwpx"
 
-                result = render_hwpx_template(template_dir, content, output)
+                result = render_hwpx_template(
+                    template_dir,
+                    content,
+                    output,
+                    execution_context=EXECUTION_CONTEXT,
+                )
 
                 assert result.leftover_placeholders == []
                 assert result.missing_fields == []
@@ -286,6 +299,78 @@ def test_render_without_any_base_raises() -> None:
             raise AssertionError("expected HwpxTemplateRenderError when no base is available")
 
 
+def _repeat_alias_map() -> AliasMap:
+    return AliasMap(
+        template_id="repeat_guard",
+        aliases={},
+        blocks={
+            "본문": RepeatBlock(
+                anchor="body_paragraph_01",
+                levels={
+                    0: ("body_paragraph_01", "□ "),
+                    1: ("body_bullet_01", " ◦ "),
+                },
+            )
+        },
+    )
+
+
+def _repeat_xml(between: str) -> str:
+    return (
+        '<hp:p id="1" paraPrIDRef="1"><hp:run charPrIDRef="1">'
+        "<hp:t>{{body_paragraph_01}}</hp:t></hp:run></hp:p>"
+        + between
+        + '<hp:p id="3" paraPrIDRef="2"><hp:run charPrIDRef="2">'
+        "<hp:t>{{body_bullet_01}}</hp:t></hp:run></hp:p>"
+    )
+
+
+_REPEAT_ITEMS = {"body_paragraph_01": [[0, "가"], [1, "나"]]}
+
+
+def test_repeat_block_keeps_deleting_blank_paragraphs_between_levels() -> None:
+    blank = '<hp:p id="2" paraPrIDRef="1"><hp:run charPrIDRef="1"><hp:t></hp:t></hp:run></hp:p>'
+
+    filled_xml, filled = render_repeat_block(
+        _repeat_xml(blank), _REPEAT_ITEMS, _repeat_alias_map()
+    )
+
+    assert filled == {"body_paragraph_01", "body_bullet_01"}
+    assert "□ 가" in filled_xml
+    assert " ◦ 나" in filled_xml
+    assert "{{" not in filled_xml
+
+
+def test_repeat_block_refuses_to_delete_text_between_levels() -> None:
+    note = (
+        '<hp:p id="2" paraPrIDRef="1"><hp:run charPrIDRef="1">'
+        "<hp:t>※ 금액은 백만원 단위로 표기</hp:t></hp:run></hp:p>"
+    )
+
+    try:
+        render_repeat_block(_repeat_xml(note), _REPEAT_ITEMS, _repeat_alias_map())
+    except HwpxTemplateRenderError as exc:
+        assert "※ 금액은 백만원 단위로 표기" in str(exc)
+    else:
+        raise AssertionError("expected HwpxTemplateRenderError for text inside the repeat region")
+
+
+def test_repeat_block_refuses_to_delete_objects_between_levels() -> None:
+    table = (
+        '<hp:p id="2" paraPrIDRef="1"><hp:run charPrIDRef="1"><hp:tbl rowCnt="1" colCnt="1">'
+        '<hp:tr><hp:tc><hp:subList><hp:p id="9"><hp:run charPrIDRef="1">'
+        "<hp:t></hp:t></hp:run></hp:p></hp:subList></hp:tc></hp:tr>"
+        "</hp:tbl></hp:run></hp:p>"
+    )
+
+    try:
+        render_repeat_block(_repeat_xml(table), _REPEAT_ITEMS, _repeat_alias_map())
+    except HwpxTemplateRenderError as exc:
+        assert "'object'" in str(exc)
+    else:
+        raise AssertionError("expected HwpxTemplateRenderError for an object inside the repeat region")
+
+
 if __name__ == "__main__":
     test_fill_fss_full_content_has_no_leftover()
     test_fill_reports_missing_and_keeps_placeholder()
@@ -298,4 +383,7 @@ if __name__ == "__main__":
     test_self_contained_template_renders_without_external_base()
     test_render_validates_output_by_default()
     test_render_without_any_base_raises()
+    test_repeat_block_keeps_deleting_blank_paragraphs_between_levels()
+    test_repeat_block_refuses_to_delete_text_between_levels()
+    test_repeat_block_refuses_to_delete_objects_between_levels()
     print("PASS: HWPX template renderer (fill + honest missing + byte-perfect repack)")

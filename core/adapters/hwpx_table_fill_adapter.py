@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -71,6 +75,16 @@ def fill_hwpx_table_cells(
     script = Path(skill_dir) / "scripts" / "fill_hwpx.py"
     payload = _normalize_cells(cells)
     _validate_inputs(source, output, script, payload)
+    payload, coordinate_errors = _translate_cell_addresses(source, payload)
+    if coordinate_errors:
+        error = f"cell_errors={coordinate_errors}"
+        return HwpxTableFillResult(
+            input_path=source,
+            output_path=output,
+            ok=False,
+            error=error,
+            report={"ok": False, "cell_errors": coordinate_errors},
+        )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".hwpx-table-fill-", dir=output.parent) as temp:
@@ -99,6 +113,7 @@ def fill_hwpx_table_cells(
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
         except Exception as exc:  # noqa: BLE001
             return HwpxTableFillResult(
@@ -172,6 +187,115 @@ def _validate_inputs(
                 raise HwpxTableFillAdapterError(
                     f"cells[{index}].{key} must be non-negative"
                 )
+
+
+def _translate_cell_addresses(
+    source: Path,
+    payload: list[dict],
+) -> tuple[list[dict], list[str]]:
+    translated = []
+    errors = []
+    with zipfile.ZipFile(source) as package:
+        section_names = sorted(
+            (
+                name
+                for name in package.namelist()
+                if re.fullmatch(r"Contents/section\d+\.xml", name, re.IGNORECASE)
+            ),
+            key=_section_number,
+        )
+        section_roots = [
+            ET.fromstring(package.read(section_name))
+            for section_name in section_names
+        ]
+
+    for item in payload:
+        section_index = item["section"]
+        table_index = item["table"]
+        row_addr = item["row"]
+        col_addr = item["col"]
+        location = (
+            f"section{section_index}.table{table_index}."
+            f"row{row_addr}.col{col_addr}"
+        )
+        if section_index >= len(section_roots):
+            errors.append(
+                f"{location}: section index out of range ({len(section_roots)} sections)"
+            )
+            continue
+        tables = _nodes(section_roots[section_index], "tbl")
+        if table_index >= len(tables):
+            errors.append(
+                f"{location}: table index out of range ({len(tables)} tables)"
+            )
+            continue
+
+        resolved = _cell_position(tables[table_index], row_addr, col_addr)
+        if resolved is None:
+            errors.append(f"{location}: cellAddr not found")
+            continue
+        row_position, col_position = resolved
+        translated.append(
+            {
+                **item,
+                "row": row_position,
+                "col": col_position,
+            }
+        )
+    return translated, errors
+
+
+def _cell_position(
+    table: ET.Element,
+    row_addr: int,
+    col_addr: int,
+) -> tuple[int, int] | None:
+    rows = _direct_children(table, "tr")
+    for row_position, row in enumerate(rows):
+        for col_position, cell in enumerate(_direct_children(row, "tc")):
+            address = next(
+                (
+                    child
+                    for child in cell
+                    if _local_name(child.tag) == "cellAddr"
+                ),
+                None,
+            )
+            if address is None:
+                continue
+            if (
+                _int_attr(address, "rowAddr") == row_addr
+                and _int_attr(address, "colAddr") == col_addr
+            ):
+                return row_position, col_position
+    return None
+
+
+def _direct_children(node: ET.Element, local_name: str) -> list[ET.Element]:
+    return [child for child in node if _local_name(child.tag) == local_name]
+
+
+def _nodes(root: ET.Element, local_name: str) -> list[ET.Element]:
+    return [node for node in root.iter() if _local_name(node.tag) == local_name]
+
+
+def _local_name(value: str) -> str:
+    return value.rsplit("}", 1)[-1].split(":", 1)[-1]
+
+
+def _int_attr(node: ET.Element, name: str) -> int | None:
+    for key, value in node.attrib.items():
+        if _local_name(key) == name:
+            try:
+                return int(value)
+            except ValueError:
+                return None
+    return None
+
+
+def _section_number(path: str) -> int:
+    match = re.search(r"section(\d+)", path, re.IGNORECASE)
+    return int(match.group(1)) if match else 10**9
 
 
 def _load_report(report_path: Path) -> dict:

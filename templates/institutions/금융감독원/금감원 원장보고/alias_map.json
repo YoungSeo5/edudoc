@@ -1,0 +1,104 @@
+{
+  "template_id": "fss_director_report",
+  "title_field": "제목",
+  "fields": {
+    "보고일": "date_01",
+    "제목": "document_title_01",
+    "보고구분": "checkbox_line_01",
+    "요약": "summary_01",
+    "결론": "conclusion_01",
+    "담당.국": "department_name_01",
+    "담당.국장.이름": "director_name_01",
+    "담당.국장.전화": "director_phone_01",
+    "담당.팀장.이름": "manager_name_01",
+    "담당.팀장.전화": "manager_phone_01"
+  },
+  "choices": {
+    "보고구분": {
+      "options": [
+        "현안검토",
+        "언론보도",
+        "국회 등",
+        "금융위·증선위",
+        "기타(현황파악)"
+      ],
+      "checked_prefix": "☑ ",
+      "unchecked_prefix": "□ ",
+      "separator": "  "
+    }
+  },
+  "text_rules": {
+    "요약": {
+      "single_paragraph": true,
+      "single_sentence": true
+    },
+    "결론": {
+      "single_paragraph": true,
+      "single_sentence": true
+    },
+    "담당.국": {
+      "single_paragraph": true,
+      "single_sentence": false,
+      "forbidden_suffix": "국"
+    },
+    "담당.국장.이름": {
+      "single_paragraph": true,
+      "single_sentence": false
+    },
+    "담당.국장.전화": {
+      "single_paragraph": true,
+      "single_sentence": false
+    },
+    "담당.팀장.이름": {
+      "single_paragraph": true,
+      "single_sentence": false
+    },
+    "담당.팀장.전화": {
+      "single_paragraph": true,
+      "single_sentence": false
+    }
+  },
+  "fit_constraints": {
+    "summary_01": {
+      "max_lines": 1
+    },
+    "conclusion_01": {
+      "max_lines": 1
+    }
+  },
+  "blocks": {
+    "본문": {
+      "anchor": "content_01",
+      "repeat": true,
+      "table_scope": false,
+      "numbered_level": 0,
+      "item_separator_levels": [0, 1, 2, 3],
+      "section_transition": {
+        "to_level": 0,
+        "separator_source_level": 0
+      },
+      "levels": {
+        "0": {
+          "field": "content_01",
+          "prefix": ""
+        },
+        "1": {
+          "field": "body_paragraph_01",
+          "prefix": "□ "
+        },
+        "2": {
+          "field": "body_bullet_01",
+          "prefix": " ◦ "
+        },
+        "3": {
+          "field": "stat_note_01",
+          "prefix": "      * "
+        },
+        "4": {
+          "field": "detail_note_01",
+          "prefix": "         † "
+        }
+      }
+    }
+  }
+}

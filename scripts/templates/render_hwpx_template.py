@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
+    RenderExecutionContext,
     load_template_content,
     render_hwpx_template,
 )
@@ -26,11 +28,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--document-type", required=True, help="문서 유형")
     parser.add_argument("--content", required=True, type=Path, help="템플릿 content.json")
     parser.add_argument("--output", required=True, type=Path, help="출력 HWPX")
+    parser.add_argument("--requester-name", help="문서 생성 요청자 이름")
     args = parser.parse_args(argv)
+    requested_at = datetime.now(timezone.utc)
 
     registry = TemplateRegistry(ROOT / "templates" / "institutions")
     template_id: str | None = None
     try:
+        execution_context = (
+            RenderExecutionContext(
+                requester_name=args.requester_name,
+                requested_at=requested_at,
+            )
+            if args.requester_name is not None
+            else None
+        )
         content = load_template_content(args.content)
         template_id = content.template_id
         candidate = registry.find(args.institution, args.document_type)
@@ -48,7 +60,12 @@ def main(argv: list[str] | None = None) -> int:
         template_dir = registry.template_path(
             args.institution, args.document_type
         ).parent
-        result = render_hwpx_template(template_dir, content.fields, args.output)
+        result = render_hwpx_template(
+            template_dir,
+            content.fields,
+            args.output,
+            execution_context=execution_context,
+        )
     except (
         OSError,
         ValueError,
@@ -82,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
                 "filled_fields": result.filled_fields,
                 "missing_fields": result.missing_fields,
                 "leftover_placeholders": result.leftover_placeholders,
+                "title_updated": result.title_updated,
                 "error": None,
             },
             ensure_ascii=False,
