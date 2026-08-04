@@ -321,12 +321,23 @@ def _refresh_fss_preview_text(output_path: Path) -> None:
             root = ElementTree.fromstring(source.read(section_infos[0]))
             paragraph_tag = f"{{{_HP_NAMESPACE}}}p"
             text_tag = f"{{{_HP_NAMESPACE}}}t"
+            table_tag = f"{{{_HP_NAMESPACE}}}tbl"
+            row_tag = f"{{{_HP_NAMESPACE}}}tr"
+            cell_tag = f"{{{_HP_NAMESPACE}}}tc"
             lines: list[str] = []
-            for paragraph in root.iter(paragraph_tag):
-                if any(
-                    nested is not paragraph
-                    for nested in paragraph.iter(paragraph_tag)
-                ):
+            for paragraph in root.findall(paragraph_tag):
+                tables = list(paragraph.iter(table_tag))
+                if tables:
+                    for table in tables:
+                        for row in table.findall(row_tag):
+                            cells: list[str] = []
+                            for cell in row.findall(cell_tag):
+                                cell_text = "".join(
+                                    "".join(node.itertext())
+                                    for node in cell.iter(text_tag)
+                                )
+                                cells.append(f"<{cell_text}>")
+                            lines.append("".join(cells))
                     continue
                 text = "".join(
                     "".join(node.itertext()) for node in paragraph.iter(text_tag)
