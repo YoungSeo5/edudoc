@@ -18,6 +18,19 @@ input file → ConverterRegistry → converter → Markdown + optional DocumentM
 
 Approved institution templates are data, not AI skills. `TemplateRegistry` resolves an explicitly requested institution and document type under `templates/institutions/<institution>/<document_type>/` and loads only `status: approved` `template.json` files. Candidate extraction remains deterministic code under `core/templates/`. The compose CLI connects the general HWPX placeholder renderer when `--institution`, `--document-type`, and `--template-content` are supplied together; the content's `template_id` must match the resolved approved template.
 
+The approved institution-template CLI keeps input interpretation outside the
+renderer. It creates the execution context once, resolves aliases and repeat
+blocks, prepares template-specific package metadata, and then passes only the
+prepared values to the HWPX renderer.
+
+```text
+source content + execution context
+-> hwpx_template_input
+-> field values + repeat values + template-specific package metadata
+-> hwpx_template_renderer
+-> validated HWPX
+```
+
 ## Layer boundaries
 
 | Layer | Responsibility | Must not do |
@@ -26,12 +39,12 @@ Approved institution templates are data, not AI skills. `TemplateRegistry` resol
 | DocumentModel | carry deterministic normalized structure/provenance | generate semantic text |
 | Generator | create a document draft from an explicit task/profile | write DOCX/HWPX/PPTX/PDF directly |
 | Validator | check a named model, Gongmun draft, or HWPX package contract | add semantic content or select itself from an extension |
+| Template input adapter | resolve human aliases, repeat values, execution context, and declared template-specific metadata | write XML or package files |
 | Renderer/Exporter | render already-authored Markdown/report into a requested format | invent meaning, Gongmun rules, or missing facts |
 
 ## Connection state
 
-- **Connected:** shared Pipeline conversion/export; dedicated Gongmun generation/validation; public-plan generation; compose DOCX/PPTX/HWPX rendering, including explicitly selected approved institution templates; DOCX/PPTX exporters.
-- **Inactive:** `core/adapters/hwpx_table_fill_adapter.py` is implemented and tested but no supported entry point invokes it.
+- **Connected:** shared Pipeline conversion/export; dedicated Gongmun generation/validation; public-plan generation; compose DOCX/PPTX/HWPX rendering, including explicitly selected approved institution templates; mapped HWPX table-cell filling through `core/adapters/hwpx_table_fill_adapter.py`; DOCX/PPTX exporters.
 - **Experimental:** Pipeline HWPX output is a minimal package writer; PDF is an optional Office fallback.
 
 See [document-routing.md](document-routing.md) for decisions and [validation-profiles.md](validation-profiles.md) for validator scope.

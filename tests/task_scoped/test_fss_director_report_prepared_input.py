@@ -5,7 +5,10 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.adapters.hwpx_template_input import prepare_hwpx_template_input
+from core.adapters.hwpx_template_input import (
+    RenderExecutionContext,
+    prepare_hwpx_template_input,
+)
 from core.adapters.hwpx_template_renderer import (
     JsonValue,
     render_prepared_hwpx_template,
@@ -33,8 +36,7 @@ def test_fss_input_preparation_separates_render_values_and_metadata() -> None:
     prepared = prepare_hwpx_template_input(
         TEMPLATE_DIR,
         _content(),
-        requester_name="오영서",
-        requested_at=REQUESTED_AT,
+        execution_context=RenderExecutionContext("오영서", REQUESTED_AT),
     )
 
     assert "제목" not in prepared.field_values
@@ -54,8 +56,7 @@ def test_prepared_renderer_does_not_need_human_input_keys(tmp_path: Path) -> Non
     prepared = prepare_hwpx_template_input(
         TEMPLATE_DIR,
         _content(),
-        requester_name="오영서",
-        requested_at=REQUESTED_AT,
+        execution_context=RenderExecutionContext("오영서", REQUESTED_AT),
     )
     output = tmp_path / "prepared.hwpx"
 

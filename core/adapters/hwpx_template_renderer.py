@@ -42,7 +42,7 @@ import tempfile
 import zipfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from typing import TypeAlias
@@ -54,7 +54,6 @@ from fontTools.ttLib import TTFont
 from .hwpx_alias_map import AliasMap, RepeatBlock
 from .hwpx_fss_director_report import (
     FSS_META_NAMES,
-    FssDirectorReportInputError,
     FssPackageMetadata,
 )
 from .hwpx_table_fill_adapter import (
@@ -63,8 +62,11 @@ from .hwpx_table_fill_adapter import (
 )
 from .hwpx_template_input import (
     HwpxTemplateInputError,
+    HwpxTemplateRenderError,
     PreparedRenderContent,
+    RenderExecutionContext,
     ResolvedRenderContent,
+    load_placeholder_map,
     prepare_hwpx_template_input,
     resolve_hwpx_template_input,
 )
@@ -102,24 +104,6 @@ _FSS_SYMBOL_FALLBACK = "seguisym.ttf"
 
 UNKNOWN = "확인 필요"
 ON_MISSING_MODES = ("keep", "sample", "unknown", "error")
-
-
-class HwpxTemplateRenderError(RuntimeError):
-    """Raised when a template cannot be rendered."""
-
-
-@dataclass(frozen=True, slots=True)
-class RenderExecutionContext:
-    requester_name: str
-    requested_at: datetime
-
-    def __post_init__(self) -> None:
-        if not self.requester_name.strip():
-            raise HwpxTemplateRenderError("execution context requires requester_name")
-        if self.requested_at.utcoffset() != timedelta(0):
-            raise HwpxTemplateRenderError(
-                "execution context requested_at must be a UTC datetime"
-            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,7 +155,10 @@ def fill_template_sections(
     """
     template_dir = Path(template_dir)
     _validate_on_missing(on_missing)
-    resolved = resolve_hwpx_template_input(template_dir, content)
+    try:
+        resolved = resolve_hwpx_template_input(template_dir, content)
+    except HwpxTemplateInputError as exc:
+        raise HwpxTemplateRenderError(str(exc)) from exc
     return _fill_resolved_template_sections(template_dir, resolved, on_missing)
 
 
@@ -385,24 +372,13 @@ def render_hwpx_template(
     output_path = Path(output_path)
     base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
     _validate_render_paths(template_dir, base, output_path)
-    requester_name = (
-        execution_context.requester_name
-        if execution_context is not None
-        else None
-    )
-    requested_at = (
-        execution_context.requested_at
-        if execution_context is not None
-        else None
-    )
     try:
         prepared = prepare_hwpx_template_input(
             template_dir,
             content,
-            requester_name=requester_name,
-            requested_at=requested_at,
+            execution_context=execution_context,
         )
-    except (FssDirectorReportInputError, HwpxTemplateInputError) as exc:
+    except HwpxTemplateInputError as exc:
         raise HwpxTemplateRenderError(str(exc)) from exc
     return _render_prepared_hwpx_template(
         template_dir,
@@ -425,6 +401,21 @@ def render_prepared_hwpx_template(
 ) -> RenderResult:
     template_dir = Path(template_dir)
     output_path = Path(output_path)
+    try:
+        target_map = load_placeholder_map(template_dir)
+    except HwpxTemplateInputError as exc:
+        raise HwpxTemplateRenderError(str(exc)) from exc
+    target_template_id_raw = target_map.get("template_id")
+    target_template_id = (
+        target_template_id_raw
+        if isinstance(target_template_id_raw, str)
+        else None
+    )
+    if content.template_id != target_template_id:
+        raise HwpxTemplateRenderError(
+            "prepared template_id mismatch: "
+            f"content={content.template_id!r}, target={target_template_id!r}"
+        )
     base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
     _validate_render_paths(template_dir, base, output_path)
     return _render_prepared_hwpx_template(

@@ -11,11 +11,14 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.adapters.hwpx_template_input import (  # noqa: E402
+    RenderExecutionContext,
+    prepare_hwpx_template_input,
+)
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
-    RenderExecutionContext,
     load_template_content,
-    render_hwpx_template,
+    render_prepared_hwpx_template,
 )
 from core.templates.registry import TemplateRegistry  # noqa: E402
 
@@ -60,11 +63,15 @@ def main(argv: list[str] | None = None) -> int:
         template_dir = registry.template_path(
             args.institution, args.document_type
         ).parent
-        result = render_hwpx_template(
+        prepared = prepare_hwpx_template_input(
             template_dir,
             content.fields,
-            args.output,
             execution_context=execution_context,
+        )
+        result = render_prepared_hwpx_template(
+            template_dir,
+            prepared,
+            args.output,
         )
     except (
         OSError,
