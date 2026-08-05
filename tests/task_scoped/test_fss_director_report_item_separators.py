@@ -18,7 +18,7 @@ from core.adapters.hwpx_alias_map import (
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
     render_repeat_block,
 )
 
@@ -125,7 +125,7 @@ def test_fss_report_inserts_each_preceding_level_separator(
     output = tmp_path / "금감원_원장보고_항목간격.hwpx"
 
     # When: the real FSS template renders the repeated body.
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,
@@ -175,7 +175,11 @@ def test_repeat_block_omits_separator_after_last_item() -> None:
     content = {"content_01": [[4, "마지막 상세"]]}
 
     # When: the block is rendered.
-    rendered, _ = render_repeat_block(_repeat_xml(), content, _repeat_alias_map())
+    rendered, _ = render_repeat_block(
+        _repeat_xml(),
+        content,
+        _repeat_alias_map().blocks,
+    )
 
     # Then: no separator is appended after the final paragraph.
     paragraphs = PARAGRAPH_RE.findall(rendered)
@@ -189,7 +193,11 @@ def test_repeat_block_inserts_one_configured_section_transition() -> None:
     alias_map = _repeat_alias_map(section_transition=(0, 0))
 
     # When: the configured transition is rendered.
-    rendered, _ = render_repeat_block(_repeat_xml(), content, alias_map)
+    rendered, _ = render_repeat_block(
+        _repeat_xml(),
+        content,
+        alias_map.blocks,
+    )
 
     # Then: exactly one level 0 separator is placed between the two items.
     paragraphs = PARAGRAPH_RE.findall(rendered)
@@ -219,7 +227,7 @@ def test_repeat_block_rejects_unsafe_declared_separator(
 
     # When/Then: rendering fails at separator collection instead of deleting it.
     with pytest.raises(HwpxTemplateRenderError, match="safe blank paragraph"):
-        render_repeat_block(xml, content, _repeat_alias_map())
+        render_repeat_block(xml, content, _repeat_alias_map().blocks)
 
 
 def test_alias_map_normalizes_separator_contract(tmp_path: Path) -> None:

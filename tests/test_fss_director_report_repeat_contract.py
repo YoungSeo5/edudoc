@@ -12,7 +12,7 @@ import pytest
 from core.adapters.hwpx_alias_map import AliasMapError, load_alias_map
 from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,7 +62,7 @@ def test_report_type_choice_renders_complete_checkbox_line(
     output = tmp_path / "금감원_원장보고_보고구분.hwpx"
     content = json.loads(CONTENT.read_text(encoding="utf-8"))
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,
@@ -113,7 +113,7 @@ def test_raw_contract_renders_repeat_block_and_preserves_fixed_form(
         template_id=placeholder_map["template_id"],
     )
 
-    result = render_hwpx_template(
+    result = orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,

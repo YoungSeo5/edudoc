@@ -8,7 +8,7 @@ from pathlib import Path
 from core.adapters.hwpx_template_renderer import (
     JsonValue,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +32,7 @@ def test_fss_preview_text_wraps_each_table_cell_with_angle_brackets(
     )
     output = tmp_path / "금감원_표_셀_미리보기.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,

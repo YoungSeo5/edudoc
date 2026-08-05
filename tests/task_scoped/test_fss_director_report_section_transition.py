@@ -10,7 +10,7 @@ import pytest
 
 from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,7 +55,7 @@ def test_fss_report_uses_title_separator_before_level_zero(
     ]
     output = tmp_path / f"section-transition-{preceding_level}.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,

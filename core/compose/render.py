@@ -7,7 +7,7 @@ from pathlib import Path
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     TemplateContent,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 from core.exporters.docx_exporter import DocxExporter
 from core.exporters.export_base import ExportResult
@@ -108,7 +108,11 @@ def render_report_to_hwpx(
                 error_code="institution_template_id_mismatch",
             )
         try:
-            render_result = render_hwpx_template(template_dir, template_content.fields, hwpx_path)
+            render_result = orchestrate_hwpx_render(
+                template_dir,
+                template_content.fields,
+                hwpx_path,
+            )
         except HwpxTemplateRenderError as exc:
             return problems, ExportResult(
                 source=markdown_path,

@@ -88,6 +88,19 @@ class FitConstraint:
 
 
 @dataclass(frozen=True, slots=True)
+class MetadataContract:
+    report_date_field: str
+    description_field: str
+    subject_block: str
+    subject_level: int
+    subject_separator: str
+    keyword_report_type_field: str
+    keyword_department_field: str
+    keyword_department_suffix: str
+    keyword_separator: str
+
+
+@dataclass(frozen=True, slots=True)
 class ChoiceRule:
     options: tuple[str, ...]
     checked_prefix: str
@@ -124,6 +137,7 @@ class AliasMap:
     choices: dict[str, ChoiceRule] = field(default_factory=dict)
     text_rules: dict[str, TextRule] = field(default_factory=dict)
     fit_constraints: dict[str, FitConstraint] = field(default_factory=dict)
+    metadata: MetadataContract | None = None
     title_field_id: str | None = None
 
     def resolve(
@@ -271,6 +285,112 @@ def _parse_choice_rule(
         checked_prefix=checked_prefix,
         unchecked_prefix=unchecked_prefix,
         separator=read_string("separator", allow_empty=True),
+    )
+
+
+def _parse_metadata_contract(
+    path: Path,
+    raw: JsonValue,
+    aliases: Mapping[str, str],
+    blocks: Mapping[str, RepeatBlock],
+) -> MetadataContract:
+    if not isinstance(raw, dict):
+        raise AliasMapError(f"{path}: metadata must be an object")
+    required = {"report_date", "description", "subject", "keywords"}
+    missing = sorted(required - raw.keys())
+    if missing:
+        raise AliasMapError(f"{path}: metadata requires {missing}")
+
+    def read_field(context: str, value: JsonValue) -> tuple[str, str]:
+        if not isinstance(value, dict):
+            raise AliasMapError(
+                f"{path}: metadata {context} must be an object"
+            )
+        alias = value.get("field")
+        if not isinstance(alias, str) or alias not in aliases:
+            raise AliasMapError(
+                f"{path}: metadata {context} references unknown field "
+                f"{alias!r}"
+            )
+        suffix = value.get("suffix", "")
+        if not isinstance(suffix, str):
+            raise AliasMapError(
+                f"{path}: metadata {context} suffix must be a string"
+            )
+        return alias, suffix
+
+    def read_block(context: str, value: JsonValue) -> tuple[str, int]:
+        if not isinstance(value, dict):
+            raise AliasMapError(
+                f"{path}: metadata {context} must be an object"
+            )
+        name = value.get("block")
+        if not isinstance(name, str) or name not in blocks:
+            raise AliasMapError(
+                f"{path}: metadata {context} references unknown block "
+                f"{name!r}"
+            )
+        level = value.get("level")
+        if (
+            not isinstance(level, int)
+            or isinstance(level, bool)
+            or level not in blocks[name].levels
+        ):
+            raise AliasMapError(
+                f"{path}: metadata {context} references unknown level "
+                f"{level!r}"
+            )
+        return name, level
+
+    report_date_field, _ = read_field("report_date", raw["report_date"])
+    description_field, _ = read_field("description", raw["description"])
+
+    subject_raw = raw["subject"]
+    if not isinstance(subject_raw, dict):
+        raise AliasMapError(f"{path}: metadata subject must be an object")
+    subject_separator = subject_raw.get("separator")
+    if not isinstance(subject_separator, str):
+        raise AliasMapError(
+            f"{path}: metadata subject separator must be a string"
+        )
+    subject_block, subject_level = read_block("subject", subject_raw)
+
+    keywords_raw = raw["keywords"]
+    if not isinstance(keywords_raw, dict):
+        raise AliasMapError(f"{path}: metadata keywords must be an object")
+    keywords_separator = keywords_raw.get("separator")
+    sources_raw = keywords_raw.get("sources")
+    if not isinstance(keywords_separator, str):
+        raise AliasMapError(
+            f"{path}: metadata keywords separator must be a string"
+        )
+    if not isinstance(sources_raw, list) or len(sources_raw) != 3:
+        raise AliasMapError(
+            f"{path}: metadata keywords requires three sources"
+        )
+    report_type_field, _ = read_field(
+        "keywords.sources[0]", sources_raw[0]
+    )
+    department_field, department_suffix = read_field(
+        "keywords.sources[1]", sources_raw[1]
+    )
+    keyword_block, keyword_level = read_block(
+        "keywords.sources[2]", sources_raw[2]
+    )
+    if (keyword_block, keyword_level) != (subject_block, subject_level):
+        raise AliasMapError(
+            f"{path}: metadata keywords must reuse the subject block and level"
+        )
+    return MetadataContract(
+        report_date_field=report_date_field,
+        description_field=description_field,
+        subject_block=subject_block,
+        subject_level=subject_level,
+        subject_separator=subject_separator,
+        keyword_report_type_field=report_type_field,
+        keyword_department_field=department_field,
+        keyword_department_suffix=department_suffix,
+        keyword_separator=keywords_separator,
     )
 
 
@@ -508,6 +628,17 @@ def load_alias_map(
             section_transition=section_transition,
         )
 
+    metadata_raw = raw.get("metadata")
+    metadata = (
+        _parse_metadata_contract(path, metadata_raw, bound, blocks)
+        if metadata_raw is not None
+        else None
+    )
+    if declared == "fss_director_report" and metadata is None:
+        raise AliasMapError(
+            f"{path}: fss_director_report requires metadata"
+        )
+
     return AliasMap(
         template_id=declared,
         aliases=bound,
@@ -515,5 +646,6 @@ def load_alias_map(
         choices=choices,
         text_rules=text_rules,
         fit_constraints=fit_constraints,
+        metadata=metadata,
         title_field_id=bound[title_alias] if title_alias is not None else None,
     )

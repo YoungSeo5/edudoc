@@ -13,12 +13,11 @@ if str(ROOT) not in sys.path:
 
 from core.adapters.hwpx_template_input import (  # noqa: E402
     RenderExecutionContext,
-    prepare_hwpx_template_input,
 )
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
     load_template_content,
-    render_prepared_hwpx_template,
+    orchestrate_hwpx_render,
 )
 from core.templates.registry import TemplateRegistry  # noqa: E402
 
@@ -63,15 +62,11 @@ def main(argv: list[str] | None = None) -> int:
         template_dir = registry.template_path(
             args.institution, args.document_type
         ).parent
-        prepared = prepare_hwpx_template_input(
+        result = orchestrate_hwpx_render(
             template_dir,
             content.fields,
-            execution_context=execution_context,
-        )
-        result = render_prepared_hwpx_template(
-            template_dir,
-            prepared,
             args.output,
+            execution_context=execution_context,
         )
     except (
         OSError,

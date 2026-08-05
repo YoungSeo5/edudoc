@@ -51,7 +51,7 @@ from xml.sax.saxutils import escape
 
 from fontTools.ttLib import TTFont
 
-from .hwpx_alias_map import AliasMap, RepeatBlock
+from .hwpx_alias_map import FitConstraint, RepeatBlock
 from .hwpx_fss_director_report import (
     FSS_META_NAMES,
     FssPackageMetadata,
@@ -65,7 +65,7 @@ from .hwpx_template_input import (
     HwpxTemplateRenderError,
     PreparedRenderContent,
     RenderExecutionContext,
-    ResolvedRenderContent,
+    ResolvedRenderPlan,
     load_placeholder_map,
     prepare_hwpx_template_input,
     resolve_hwpx_template_input,
@@ -159,12 +159,18 @@ def fill_template_sections(
         resolved = resolve_hwpx_template_input(template_dir, content)
     except HwpxTemplateInputError as exc:
         raise HwpxTemplateRenderError(str(exc)) from exc
-    return _fill_resolved_template_sections(template_dir, resolved, on_missing)
+    return _fill_resolved_template_sections(
+        template_dir,
+        resolved.render_plan,
+        resolved.unknown_keys,
+        on_missing,
+    )
 
 
 def _fill_resolved_template_sections(
     template_dir: Path,
-    content: ResolvedRenderContent,
+    plan: ResolvedRenderPlan,
+    unknown_keys: tuple[str, ...],
     on_missing: str,
 ) -> tuple[dict[str, str], RenderResult]:
     filled: set[str] = set()
@@ -174,12 +180,11 @@ def _fill_resolved_template_sections(
     template_files = sorted((template_dir / "template").glob("section*.template.xml"))
     if not template_files:
         raise HwpxTemplateRenderError(f"no template/section*.template.xml in {template_dir}")
-    if content.alias_map is not None:
-        _validate_fit_constraints(
-            template_dir,
-            content.field_values,
-            content.alias_map,
-        )
+    _validate_fit_constraints(
+        template_dir,
+        plan.field_values,
+        plan.fit_constraints,
+    )
     for template_file in template_files:
         match = _SECTION_TEMPLATE_RE.fullmatch(template_file.name)
         if match is None:
@@ -188,13 +193,13 @@ def _fill_resolved_template_sections(
         xml = template_file.read_text(encoding="utf-8")
         filled_xml, repeat_filled = render_repeat_block(
             xml,
-            content.repeat_values,
-            content.alias_map,
+            plan.repeat_values,
+            plan.repeat_blocks,
         )
         filled.update(repeat_filled)
         filled_xml = _fill_xml(
             filled_xml,
-            content.field_values,
+            plan.field_values,
             filled,
             missing,
         )
@@ -227,12 +232,12 @@ def _fill_resolved_template_sections(
         filled_fields=sorted(filled),
         missing_fields=sorted(missing),
         leftover_placeholders=leftover,
-        unknown_keys=list(content.unknown_keys),
+        unknown_keys=list(unknown_keys),
     )
     return filled_sections, result
 
 
-def _write_rendered_package(
+def _write_hwpx_package(
     base: Path,
     output_path: Path,
     package_content: _PackageContent,
@@ -344,7 +349,7 @@ def _refresh_fss_preview_text(output_path: Path) -> None:
         os.replace(preview_output, output_path)
 
 
-def render_hwpx_template(
+def orchestrate_hwpx_render(
     template_dir: Path | str,
     content: Mapping[str, JsonValue],
     output_path: Path | str,
@@ -368,10 +373,6 @@ def render_hwpx_template(
     and raises if it does not pass — a file that only opens in Hancom is not enough.
     Set ``validate=False`` only to intentionally inspect an unvalidated result.
     """
-    template_dir = Path(template_dir)
-    output_path = Path(output_path)
-    base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
-    _validate_render_paths(template_dir, base, output_path)
     try:
         prepared = prepare_hwpx_template_input(
             template_dir,
@@ -380,11 +381,11 @@ def render_hwpx_template(
         )
     except HwpxTemplateInputError as exc:
         raise HwpxTemplateRenderError(str(exc)) from exc
-    return _render_prepared_hwpx_template(
+    return render_prepared_hwpx_template(
         template_dir,
         prepared,
         output_path,
-        base,
+        base_hwpx=base_hwpx,
         on_missing=on_missing,
         validate=validate,
     )
@@ -457,8 +458,10 @@ def _render_prepared_hwpx_template(
 ) -> RenderResult:
     _validate_on_missing(on_missing)
     document_title = (
-        content.field_values.get(content.title_field_id)
-        if content.title_field_id
+        content.render_plan.field_values.get(
+            content.render_plan.title_field_id
+        )
+        if content.render_plan.title_field_id
         else None
     )
     if not isinstance(document_title, str) or not document_title:
@@ -466,7 +469,7 @@ def _render_prepared_hwpx_template(
     table_fills, table_filled, table_missing = _table_cell_fills(
         template_dir,
         content.placeholder_map,
-        content.field_values,
+        content.render_plan.field_values,
         on_missing=on_missing,
     )
     if on_missing == "error" and table_missing:
@@ -475,14 +478,15 @@ def _render_prepared_hwpx_template(
         )
     filled_sections, result = _fill_resolved_template_sections(
         template_dir,
-        content,
+        content.render_plan,
+        content.unknown_keys,
         on_missing,
     )
     result.filled_fields = sorted(set(result.filled_fields) | table_filled)
     result.missing_fields = sorted(set(result.missing_fields) | table_missing)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    _write_rendered_package(
+    _write_hwpx_package(
         base,
         output_path,
         _PackageContent(
@@ -525,7 +529,7 @@ def validate_hwpx_output(output_path: Path | str) -> None:
 def snapshot_source_hwpx(source_hwpx: Path | str, template_dir: Path | str) -> Path:
     """Store a byte copy of the source HWPX as ``<template_dir>/source.hwpx``.
 
-    Makes the template self-contained: ``render_hwpx_template`` can then render
+    Makes the template self-contained: ``orchestrate_hwpx_render`` can then render
     with no external base file, using this exact original package as the base.
     """
     source_hwpx = Path(source_hwpx)
@@ -859,13 +863,10 @@ def _repeat_replacement_span(
 def render_repeat_block(
     xml: str,
     content: Mapping[str, JsonValue],
-    alias_map: AliasMap | None,
+    blocks: Mapping[str, RepeatBlock],
 ) -> tuple[str, set[str]]:
-    if alias_map is None:
-        return xml, set()
-
     filled: set[str] = set()
-    for name, block in alias_map.blocks.items():
+    for name, block in blocks.items():
         items = content.get(block.anchor)
         if not isinstance(items, list):
             continue
@@ -882,9 +883,9 @@ def render_repeat_block(
 def _validate_fit_constraints(
     template_dir: Path,
     content: Mapping[str, JsonValue],
-    alias_map: AliasMap,
+    constraints: Mapping[str, FitConstraint],
 ) -> None:
-    if not alias_map.fit_constraints:
+    if not constraints:
         return
 
     roots = [
@@ -896,17 +897,13 @@ def _validate_fit_constraints(
     header = ElementTree.fromstring(
         (template_dir / "template" / "header.xml").read_bytes()
     )
-    alias_by_field = {
-        field_id: alias for alias, field_id in alias_map.aliases.items()
-    }
-
-    for field_id in alias_map.fit_constraints:
+    for field_id in constraints:
         value = content.get(field_id)
         if value is None:
             continue
         if not isinstance(value, str):
             raise HwpxTemplateRenderError(
-                f"field {alias_by_field.get(field_id, field_id)!r} "
+                f"field {field_id!r} "
                 "must be a string"
             )
 
@@ -974,9 +971,9 @@ def _validate_fit_constraints(
         char_pr_id = next(iter(char_pr_ids))
         measured_width = _measure_text_hwpunit(header, char_pr_id, full_text)
         if measured_width > available_width:
-            alias = alias_by_field.get(field_id, field_id)
             raise HwpxTemplateRenderError(
-                f"field {alias!r} does not fit in one line of the source cell"
+                f"field {field_id!r} "
+                "does not fit in one line of the source cell"
             )
 
 

@@ -1,6 +1,35 @@
 {
   "template_id": "fss_director_report",
   "title_field": "제목",
+  "metadata": {
+    "report_date": {
+      "field": "보고일"
+    },
+    "description": {
+      "field": "결론"
+    },
+    "subject": {
+      "block": "본문",
+      "level": 0,
+      "separator": ", "
+    },
+    "keywords": {
+      "separator": ", ",
+      "sources": [
+        {
+          "field": "보고구분"
+        },
+        {
+          "field": "담당.국",
+          "suffix": "국"
+        },
+        {
+          "block": "본문",
+          "level": 0
+        }
+      ]
+    }
+  },
   "fields": {
     "보고일": "date_01",
     "제목": "document_title_01",

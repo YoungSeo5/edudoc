@@ -25,7 +25,7 @@ from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
     fill_template_sections,
     load_content_fields,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
     render_repeat_block,
     snapshot_source_hwpx,
     validate_hwpx_output,
@@ -162,7 +162,7 @@ def test_registered_fss_templates_render_text_shapes_without_placeholders() -> N
             with tempfile.TemporaryDirectory() as tmp:
                 output = Path(tmp) / f"rendered-{index}.hwpx"
 
-                result = render_hwpx_template(
+                result = orchestrate_hwpx_render(
                     template_dir,
                     content,
                     output,
@@ -196,7 +196,7 @@ def test_render_replaces_only_section_in_base_hwpx() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), template_xml, "demo_field")
         out = Path(tmp) / "rendered.hwpx"
-        result = render_hwpx_template(tmp, {"demo_field": "RENDER_OK"}, out, base_hwpx=BROTHER_HWPX)
+        result = orchestrate_hwpx_render(tmp, {"demo_field": "RENDER_OK"}, out, base_hwpx=BROTHER_HWPX)
 
         assert result.leftover_placeholders == []
         assert result.filled_fields == ["demo_field"]
@@ -221,7 +221,7 @@ def test_self_contained_template_renders_without_external_base() -> None:
         assert (tmp / "source.hwpx").read_bytes() == BROTHER_HWPX.read_bytes()
 
         out = Path(tmp) / "rendered.hwpx"
-        result = render_hwpx_template(tmp, {"demo_field": "RENDER_OK"}, out)  # no base_hwpx
+        result = orchestrate_hwpx_render(tmp, {"demo_field": "RENDER_OK"}, out)  # no base_hwpx
 
         assert result.leftover_placeholders == []
         with zipfile.ZipFile(out) as z:
@@ -238,7 +238,7 @@ def test_render_validates_output_by_default() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), template_xml, "demo_field")
         out = Path(tmp) / "rendered.hwpx"
-        render_hwpx_template(tmp, {"demo_field": "OK"}, out, base_hwpx=BROTHER_HWPX)  # validate=True
+        orchestrate_hwpx_render(tmp, {"demo_field": "OK"}, out, base_hwpx=BROTHER_HWPX)  # validate=True
         validate_hwpx_output(out)  # explicit: no error means strict validation passed
 
 
@@ -274,7 +274,7 @@ def test_render_repairs_missing_hwpunitchar_root_namespace(tmp_path: Path) -> No
     template_dir = _write_template_dir(tmp_path / "candidate", template_xml, "demo_field")
     output = tmp_path / "rendered.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         template_dir,
         {"demo_field": "RENDER_OK"},
         output,
@@ -292,7 +292,7 @@ def test_render_without_any_base_raises() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), "<hp:p><hp:t>{{x}}</hp:t></hp:p>", "x")
         try:
-            render_hwpx_template(tmp, {"x": "v"}, Path(tmp) / "out.hwpx")
+            orchestrate_hwpx_render(tmp, {"x": "v"}, Path(tmp) / "out.hwpx")
         except HwpxTemplateRenderError as exc:
             assert "self-contained" in str(exc)
         else:
@@ -332,7 +332,7 @@ def test_repeat_block_keeps_deleting_blank_paragraphs_between_levels() -> None:
     blank = '<hp:p id="2" paraPrIDRef="1"><hp:run charPrIDRef="1"><hp:t></hp:t></hp:run></hp:p>'
 
     filled_xml, filled = render_repeat_block(
-        _repeat_xml(blank), _REPEAT_ITEMS, _repeat_alias_map()
+        _repeat_xml(blank), _REPEAT_ITEMS, _repeat_alias_map().blocks
     )
 
     assert filled == {"body_paragraph_01", "body_bullet_01"}
@@ -348,7 +348,11 @@ def test_repeat_block_refuses_to_delete_text_between_levels() -> None:
     )
 
     try:
-        render_repeat_block(_repeat_xml(note), _REPEAT_ITEMS, _repeat_alias_map())
+        render_repeat_block(
+            _repeat_xml(note),
+            _REPEAT_ITEMS,
+            _repeat_alias_map().blocks,
+        )
     except HwpxTemplateRenderError as exc:
         assert "※ 금액은 백만원 단위로 표기" in str(exc)
     else:
@@ -364,7 +368,11 @@ def test_repeat_block_refuses_to_delete_objects_between_levels() -> None:
     )
 
     try:
-        render_repeat_block(_repeat_xml(table), _REPEAT_ITEMS, _repeat_alias_map())
+        render_repeat_block(
+            _repeat_xml(table),
+            _REPEAT_ITEMS,
+            _repeat_alias_map().blocks,
+        )
     except HwpxTemplateRenderError as exc:
         assert "'object'" in str(exc)
     else:

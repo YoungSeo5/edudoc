@@ -10,7 +10,7 @@ import pytest
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,7 +34,7 @@ def test_render_rejects_source_as_output_without_changing_source(
     original = source.read_bytes()
 
     with pytest.raises(HwpxTemplateRenderError, match="source HWPX"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             json.loads(CONTENT_PATH.read_text(encoding="utf-8")),
             source,

@@ -279,7 +279,7 @@
   },
   "renderer": {
     "preferred_format": "hwpx",
-    "route": "core.adapters.hwpx_template_renderer:render_hwpx_template",
+    "route": "core.adapters.hwpx_template_renderer:orchestrate_hwpx_render",
     "reference_hwpx": "source.hwpx",
     "fallback": "md2hwpx"
   },

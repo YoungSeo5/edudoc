@@ -10,7 +10,7 @@ import hwpx
 
 from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,7 +69,7 @@ def test_fss_body_numbers_multiple_section_titles_and_preserves_styles(
     ]
     output = tmp_path / "금감원_원장보고_다중항목.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,

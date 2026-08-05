@@ -12,7 +12,7 @@ import pytest
 from core.adapters.hwpx_alias_map import AliasMapError, load_alias_map
 from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -58,7 +58,7 @@ def test_fss_report_prefixes_conclusion_and_preserves_title_gap(
     content["결론"] = "검토 결과를 반영한다."
     output = tmp_path / "금감원_원장보고_결론_제목간격.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,

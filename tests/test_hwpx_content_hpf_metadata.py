@@ -1,8 +1,12 @@
 """``Contents/content.hpf`` 메타데이터 갱신 계약.
 
-금감원 원장보고는 원본 입력과 실행 컨텍스트로 지정 메타데이터를 바꾸고,
-다른 템플릿은 기존 제목·렌더 시각 처리 흐름을 유지한다. 매니페스트처럼
-대상으로 선언되지 않은 XML은 재포맷하지 않는다.
+생성일·수정일은 렌더 시각으로 갱신하고, 문서 제목은
+``alias_map.json``의 ``title_field``가 선언된 템플릿에서만 바꾼다.
+선언이 없으면 제목을 원본 그대로 유지하고
+``RenderResult.title_updated``로 미변경 사실을 보고한다.
+
+일반 템플릿의 작성자·최종저장자와 매니페스트는 원본 그대로 유지한다.
+금감원 원장보고의 전용 메타데이터 계약은 task-scoped 테스트에서 별도로 검증한다.
 """
 from __future__ import annotations
 
@@ -20,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
     snapshot_source_hwpx,
 )
 
@@ -55,7 +59,7 @@ def _meta(xml: str, name: str) -> str | None:
 def _render_fss(tmp_path: Path):
     content = json.loads(CONTENT.read_text(encoding="utf-8"))
     output = tmp_path / "금감원_원장보고.hwpx"
-    return output, render_hwpx_template(
+    return output, orchestrate_hwpx_render(
         FSS_DIR,
         content,
         output,
@@ -132,7 +136,7 @@ def test_template_without_alias_map_gets_fresh_dates_and_keeps_title(
     template_dir = _brother_template_dir(tmp_path)
     output = tmp_path / "브라더.hwpx"
 
-    result = render_hwpx_template(template_dir, {"demo_field": "OK"}, output)
+    result = orchestrate_hwpx_render(template_dir, {"demo_field": "OK"}, output)
 
     filled = _hpf(output)
     source = _hpf(BROTHER_HWPX)
@@ -160,7 +164,7 @@ def test_missing_created_date_meta_is_reported_not_ignored(tmp_path: Path) -> No
             destination.writestr(info, payload)
 
     with pytest.raises(HwpxTemplateRenderError, match="CreatedDate"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             template_dir,
             {"demo_field": "OK"},
             tmp_path / "출력.hwpx",

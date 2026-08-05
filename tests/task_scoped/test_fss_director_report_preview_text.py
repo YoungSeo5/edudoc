@@ -8,7 +8,7 @@ from pathlib import Path
 from core.adapters.hwpx_template_renderer import (
     JsonValue,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,7 +44,7 @@ def test_fss_preview_text_matches_approved_expected_text(tmp_path: Path) -> None
     output = tmp_path / "금감원_원장보고_미리보기.hwpx"
 
     # When: 담당자 표 치환까지 포함한 최종 HWPX를 생성한다.
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         _content(),
         output,

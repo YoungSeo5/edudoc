@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
     load_template_content,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 from core.templates.hwpx_content_separator import (  # noqa: E402
     separate_hwpx_template_content,
@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
 
         sample_content = load_template_content(separation.content_sample)
         sample_output = args.output_dir / "roundtrip.sample.hwpx"
-        sample_render = render_hwpx_template(
+        sample_render = orchestrate_hwpx_render(
             args.output_dir,
             sample_content.fields,
             sample_output,
@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         test_output = args.output_dir / "roundtrip.test.hwpx"
-        test_render = render_hwpx_template(
+        test_render = orchestrate_hwpx_render(
             args.output_dir,
             test_fields,
             test_output,

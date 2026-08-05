@@ -78,9 +78,8 @@ def test_fill_template_sections_keeps_render_error_contract(
     assert type(caught.value) is HwpxTemplateRenderError
 
 
-def test_approved_template_cli_uses_prepared_render_path(
+def test_approved_template_cli_renders_after_boundary_refactor(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     content_path = tmp_path / "content.json"
     content_path.write_text(
@@ -91,21 +90,6 @@ def test_approved_template_cli_uses_prepared_render_path(
         encoding="utf-8",
     )
     output = tmp_path / "rendered.hwpx"
-    calls: list[str] = []
-    real_prepare = render_cli.prepare_hwpx_template_input
-    real_render = render_cli.render_prepared_hwpx_template
-
-    def prepare_spy(*args, **kwargs):
-        calls.append("prepare")
-        return real_prepare(*args, **kwargs)
-
-    def render_spy(*args, **kwargs):
-        calls.append("render")
-        return real_render(*args, **kwargs)
-
-    monkeypatch.setattr(render_cli, "prepare_hwpx_template_input", prepare_spy)
-    monkeypatch.setattr(render_cli, "render_prepared_hwpx_template", render_spy)
-
     exit_code = render_cli.main(
         [
             "--institution",
@@ -122,5 +106,4 @@ def test_approved_template_cli_uses_prepared_render_path(
     )
 
     assert exit_code == 0
-    assert calls == ["prepare", "render"]
     assert output.is_file()

@@ -13,7 +13,7 @@ from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     JsonValue,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -78,7 +78,7 @@ def test_fss_report_renders_fixed_form_text_around_variable_values(
     output = tmp_path / "금감원_원장보고_고정문구_분리.hwpx"
 
     # When: 실제 승인 템플릿으로 HWPX를 렌더링한다.
-    result = render_hwpx_template(
+    result = orchestrate_hwpx_render(
         TEMPLATE_DIR,
         _content(),
         output,
@@ -132,7 +132,7 @@ def test_fss_report_rejects_text_without_one_terminal_mark(
 
     # When/Then: 문서 생성 전에 입력 계약 위반으로 중단한다.
     with pytest.raises(AliasMapError, match="one sentence"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             content,
             tmp_path / "unused-terminal-mark-test.hwpx",
@@ -156,7 +156,7 @@ def test_fss_report_applies_sentence_rule_to_direct_field_ids(
 
     # When/Then: 입력 경로와 관계없이 같은 문장 계약으로 중단한다.
     with pytest.raises(AliasMapError, match="one sentence"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             content,
             tmp_path / "unused-direct-field-test.hwpx",
@@ -175,7 +175,7 @@ def test_fss_report_rejects_multiline_box_text(
 
     # When/Then: 폭 측정 전에 단일 문단 계약 위반으로 중단한다.
     with pytest.raises(AliasMapError, match="single paragraph"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             content,
             tmp_path / "unused-multiline-test.hwpx",
@@ -183,9 +183,13 @@ def test_fss_report_rejects_multiline_box_text(
         )
 
 
-@pytest.mark.parametrize("alias", ["요약", "결론"])
+@pytest.mark.parametrize(
+    ("alias", "field_id"),
+    [("요약", "summary_01"), ("결론", "conclusion_01")],
+)
 def test_fss_report_rejects_text_wider_than_source_cell(
     alias: str,
+    field_id: str,
     tmp_path: Path,
 ) -> None:
     # Given: 입력값만은 맞지만 고정 기호까지 더하면 박스 폭을 넘는다.
@@ -195,9 +199,9 @@ def test_fss_report_rejects_text_wider_than_source_cell(
     # When/Then: 글꼴이나 셀을 바꾸지 않고 렌더링 오류로 중단한다.
     with pytest.raises(
         HwpxTemplateRenderError,
-        match=rf"field {alias!r} does not fit in one line",
+        match=rf"field {field_id!r} does not fit in one line",
     ):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             content,
             tmp_path / "unused-width-test.hwpx",
@@ -214,7 +218,7 @@ def test_fss_report_rejects_department_name_with_fixed_suffix(
 
     # When/Then: "정보보호국국"을 만들지 않고 계약 위반으로 중단한다.
     with pytest.raises(AliasMapError, match="must not include suffix '국'"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             content,
             tmp_path / "unused-department-suffix-test.hwpx",

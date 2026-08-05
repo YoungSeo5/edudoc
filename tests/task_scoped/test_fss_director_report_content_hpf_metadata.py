@@ -16,7 +16,7 @@ from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
     JsonValue,
     RenderExecutionContext,
-    render_hwpx_template,
+    orchestrate_hwpx_render,
 )
 from scripts.templates.render_hwpx_template import main as render_cli
 
@@ -129,7 +129,7 @@ def test_fss_content_hpf_uses_source_content_and_execution_context(
         requested_at=REQUESTED_AT,
     )
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,
@@ -164,7 +164,7 @@ def test_fss_content_hpf_rejects_missing_or_duplicate_metadata(
     broken = _broken_base(tmp_path, target=target, duplicate=duplicate)
 
     with pytest.raises(HwpxTemplateRenderError, match=target):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             _content(),
             tmp_path / "invalid.hwpx",
@@ -181,7 +181,7 @@ def test_fss_content_hpf_clears_description_when_conclusion_is_missing(
     del content["결론"]
     output = tmp_path / "without-conclusion.hwpx"
 
-    render_hwpx_template(
+    orchestrate_hwpx_render(
         TEMPLATE_DIR,
         content,
         output,
@@ -260,7 +260,7 @@ def test_execution_context_rejects_blank_requester_name() -> None:
 
 def test_fss_render_requires_execution_context(tmp_path: Path) -> None:
     with pytest.raises(HwpxTemplateRenderError, match="execution_context"):
-        render_hwpx_template(
+        orchestrate_hwpx_render(
             TEMPLATE_DIR,
             _content(),
             tmp_path / "missing-context.hwpx",

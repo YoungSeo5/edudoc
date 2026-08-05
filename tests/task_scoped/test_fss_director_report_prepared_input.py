@@ -39,12 +39,15 @@ def test_fss_input_preparation_separates_render_values_and_metadata() -> None:
         execution_context=RenderExecutionContext("오영서", REQUESTED_AT),
     )
 
-    assert "제목" not in prepared.field_values
-    assert prepared.field_values["document_title_01"] == (
+    assert "제목" not in prepared.render_plan.field_values
+    assert prepared.render_plan.field_values["document_title_01"] == (
         "가상자산 이상거래 대응 진행현황"
     )
-    assert "content_01" not in prepared.field_values
-    assert prepared.repeat_values["content_01"][0] == [0, "추진 배경"]
+    assert "content_01" not in prepared.render_plan.field_values
+    assert prepared.render_plan.repeat_values["content_01"][0] == [
+        0,
+        "추진 배경",
+    ]
     assert prepared.package_metadata is not None
     assert prepared.package_metadata.subject == "추진 배경, 주요 내용"
     assert prepared.package_metadata.keywords == (
