@@ -19,6 +19,7 @@ from core.adapters.hwpx_template_renderer import (  # noqa: E402
 from core.templates.hwpx_content_separator import (  # noqa: E402
     separate_hwpx_template_content,
 )
+from core.templates.registry import TemplateRegistry  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -62,6 +63,15 @@ def main(argv: list[str] | None = None) -> int:
             raise HwpxTemplateRenderError(
                 "QA generation must leave template.json status as candidate"
             )
+
+        # 이미 등록된 템플릿이 있으면, alias_map이 묶어 둔 field_id가 후보에서
+        # 같은 내용을 가리키는지 먼저 확인한다. field_id는 순번이라 앞쪽 분류가
+        # 하나만 달라져도 뒤 번호가 조용히 다른 텍스트로 밀린다.
+        field_identity = TemplateRegistry().verify_candidate_field_identity(
+            args.institution,
+            args.document_type,
+            args.output_dir,
+        )
 
         sample_content = load_template_content(separation.content_sample)
         sample_output = args.output_dir / "roundtrip.sample.hwpx"
@@ -109,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
             "template_id_source": template_id_source,
             "status": candidate_data["status"],
             "source_snapshot_matches": source_snapshot_matches,
+            "bound_field_identity": field_identity,
             "sample_render": sample_render.to_meta(),
             "test_render": test_render.to_meta(),
             "strict_validation": {

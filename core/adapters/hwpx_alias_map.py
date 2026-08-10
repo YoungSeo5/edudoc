@@ -140,6 +140,21 @@ class AliasMap:
     metadata: MetadataContract | None = None
     title_field_id: str | None = None
 
+    @property
+    def referenced_field_ids(self) -> frozenset[str]:
+        """Every ``field_id`` this alias map binds human input to.
+
+        The alias map is the only place that knows which of its structures hold
+        field IDs, so identity checks ask it rather than re-reading its JSON.
+        """
+        referenced = set(self.aliases.values()) | set(self.fit_constraints)
+        for block in self.blocks.values():
+            referenced.add(block.anchor)
+            referenced.update(field_id for field_id, _ in block.levels.values())
+        if self.title_field_id is not None:
+            referenced.add(self.title_field_id)
+        return frozenset(referenced)
+
     def resolve(
         self,
         content: Mapping[str, JsonValue],
