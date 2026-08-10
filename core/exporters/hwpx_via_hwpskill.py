@@ -10,6 +10,7 @@ skill is not present, a structured failure is returned instead of crashing.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -96,6 +97,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
         try:
             build = subprocess.run(
                 cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
         except Exception as e:  # noqa: BLE001 - structured adapter failure
             return ExportResult(
@@ -131,6 +133,7 @@ class HwpxViaHwpSkillExporter(BaseExporter):
             r = subprocess.run(
                 [sys.executable, str(validate_script), str(output_path)],
                 capture_output=True, text=True, encoding="utf-8", errors="replace",
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             )
         except Exception as e:  # noqa: BLE001
             return {"passed": False, "summary": repr(e)}

@@ -18,6 +18,7 @@ from core.adapters.hwpx_template_renderer import (
     RenderExecutionContext,
     orchestrate_hwpx_render,
 )
+from core.adapters.hwpx_template_input import prepare_hwpx_template_input
 from scripts.templates.render_hwpx_template import main as render_cli
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -190,6 +191,19 @@ def test_fss_content_hpf_clears_description_when_conclusion_is_missing(
     )
 
     assert _meta(_hpf(output), "description") == ""
+
+
+def test_prepared_fss_metadata_keeps_missing_optional_conclusion_empty() -> None:
+    content = _content()
+    content.pop("결론")
+
+    prepared = prepare_hwpx_template_input(
+        TEMPLATE_DIR,
+        content,
+        execution_context=RenderExecutionContext("오영서", REQUESTED_AT),
+    )
+
+    assert prepared.package_metadata.description == ""
 
 
 def test_render_cli_passes_requester_name_to_fss_metadata(tmp_path: Path) -> None:

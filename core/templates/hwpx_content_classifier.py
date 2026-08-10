@@ -43,10 +43,15 @@ def build_text_contexts(root: ET.Element, section: str) -> list[TextContext]:
     parents = {child: parent for parent in root.iter() for child in parent}
     tables = _nodes(root, "tbl")
     table_indexes = {id(table): index for index, table in enumerate(tables)}
+    paragraphs = _nodes(root, "p")
+    paragraph_indexes = {
+        id(paragraph): index for index, paragraph in enumerate(paragraphs)
+    }
     contexts: list[TextContext] = []
     for index, node in enumerate(_nodes(root, "t")):
         table = _nearest(node, parents, "tbl")
         cell = _nearest(node, parents, "tc")
+        paragraph = _nearest(node, parents, "p")
         row, col = _cell_address(cell)
         location = TextLocation(
             section=section,
@@ -54,6 +59,9 @@ def build_text_contexts(root: ET.Element, section: str) -> list[TextContext]:
             table=table_indexes.get(id(table)) if table is not None else None,
             row=row,
             col=col,
+            paragraph_index=(
+                paragraph_indexes.get(id(paragraph)) if paragraph is not None else None
+            ),
         )
         contexts.append(
             TextContext(

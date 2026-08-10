@@ -413,7 +413,7 @@
   ],
   "unknown_fields": [],
   "diagnostics": [],
-  "status": "approved",
+  "status": "candidate",
   "refinement_passes": 0,
   "format": "hwpx",
   "template_id": "fss_virtual_asset_report",

@@ -120,6 +120,65 @@ def test_unbound_fields_may_be_renumbered_freely(tmp_path: Path) -> None:
     }
 
 
+def test_qa_rejects_a_reextraction_that_renumbers_bound_fields(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """실제 사례: 금감원 원페이지를 지금 separator로 다시 뽑으면 순번이 재배치된다."""
+    exit_code = qa_hwpx_template.main(
+        [
+            "--source",
+            str(ONE_PAGE / "source.hwpx"),
+            "--output-dir",
+            str(tmp_path / "candidate"),
+            "--institution",
+            "금융감독원",
+            "--document-type",
+            "금감원 원페이지",
+            "--template-id",
+            "fss_one_page",
+        ]
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert summary["ok"] is False
+    assert "alias_map.json이 묶은 field_id" in summary["error"]
+    assert "document_title_01" in summary["error"]
+    assert "content_12" in summary["error"]
+
+
+def test_qa_checks_registered_identity_outside_repository_cwd(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outside_cwd = tmp_path / "outside-repository"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    exit_code = qa_hwpx_template.main(
+        [
+            "--source",
+            str(ONE_PAGE / "source.hwpx"),
+            "--output-dir",
+            str(tmp_path / "candidate"),
+            "--institution",
+            "금융감독원",
+            "--document-type",
+            "금감원 원페이지",
+            "--template-id",
+            "fss_one_page",
+        ]
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert summary["ok"] is False
+    assert "alias_map.json이 묶은 field_id" in summary["error"]
+
 
 def test_qa_reports_when_there_is_nothing_to_compare_against(
     tmp_path: Path,

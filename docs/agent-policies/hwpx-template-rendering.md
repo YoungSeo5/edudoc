@@ -53,3 +53,18 @@ required before any candidate is promoted.
 Approved-template output uses
 `scripts/templates/render_hwpx_template.py`. Candidate QA and approved-template
 output are separate routes.
+
+## Layout preservation
+
+Which formatting a placeholder must preserve (paragraph style, paragraph
+margins, cell margins) is currently decided in four separate places, and the
+contract exists for only one approved template. The single recorded contract
+that replaces them is designed in
+[HWPX 레이아웃 보존 계약 (설계)](hwpx-layout-context.md). That design is
+planned, not implemented.
+
+## Pipeline diagram
+
+[HWPX 렌더링·QA 파이프라인 다이어그램](hwpx-render-pipeline-diagram.md) shows
+how approved-template final rendering and candidate QA share input resolution
+and the render/verify kernel described above.

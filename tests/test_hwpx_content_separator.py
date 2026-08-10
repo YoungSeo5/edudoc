@@ -8,7 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from core.templates.hwpx_content_separator import separate_hwpx_template_content
+from core.templates.hwpx_content_separator import (
+    _section_decisions,
+    separate_hwpx_template_content,
+)
+from core.templates.hwpx_separation_rules import load_separation_rules
 
 
 HEADER = (
@@ -124,20 +128,28 @@ def test_separator_preserves_footer_instruction_as_fixed_text() -> None:
         )
 
         # Then: only the exact footer stays fixed; the other text remains replaceable.
-        assert content["fields"]["document_title_02"] == "가상자산 관련 이상거래 현황파악 진행현황"
-        assert content["fields"]["document_title_03"] == "※ 보고 일정은 별도 안내"
+        assert content["fields"]["document_title_01"] == "가상자산 관련 이상거래 현황파악 진행현황"
+        assert content["fields"]["document_title_02"] == "※ 보고 일정은 별도 안내"
         assert content["fields"]["body_paragraph_01"] == "□ 최근 이상매매 정황이 포착됨"
         assert "footer_instruction_01" not in content["fields"]
+        assert "가상자산 관련 이상거래 현황파악 진행현황" in section_template
+        assert "{{document_title_01}}" not in section_template
         assert "{{document_title_02}}" in section_template
-        assert "{{document_title_03}}" in section_template
         assert "{{body_paragraph_01}}" in section_template
         assert "※ 1페이지 하단에 보고자 및 연락처 등 표시" in section_template
         assert "{{footer_instruction_01}}" not in section_template
         assert "현안(이슈)보고" in section_template
         assert "끝." in section_template
-        assert mapping["fields"][0]["table"] == 0
-        assert mapping["fields"][0]["row"] == 0
-        assert mapping["fields"][0]["col"] == 1
+        table_field = next(
+            entry
+            for entry in mapping["fields"]
+            if entry["field_id"] == "document_title_01"
+        )
+        assert table_field["replacement_mode"] == "table_cell"
+        assert table_field["table"] == 0
+        assert table_field["row"] == 0
+        assert table_field["col"] == 1
+        assert mapping["replacement_mode"] == "mixed"
         assert mapping["classification_rule_set"] == "structural-v1"
         assert mapping["template_rule_count"] == 1
         updated_template = json.loads((output / "template.json").read_text(encoding="utf-8"))
@@ -152,7 +164,52 @@ def test_separator_preserves_footer_instruction_as_fixed_text() -> None:
         assert (
             "- Rendering retains `linesegarray` caches in unchanged sections."
         ) in review
+        assert (
+            "- Non-table fields use `<hp:t>` placeholders; table fields use mapped cell coordinates."
+            in review
+        )
         assert "linesegarray are preserved" not in review
+
+
+def test_separator_assigns_table_field_ids_in_document_order() -> None:
+    # Given: a table value occurs before a later non-table document title.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        source = root / "source.hwpx"
+        output = root / "template"
+        _write_hwpx(source)
+
+        # When: content is separated into the template contract.
+        result = separate_hwpx_template_content(
+            source,
+            output,
+            template_id="document_order",
+            institution="demo",
+        )
+        fields = json.loads(result.content_sample.read_text(encoding="utf-8"))["fields"]
+
+        # Then: the table title keeps the first document-title identifier.
+        assert fields["document_title_01"] == "가상자산 관련 이상거래 현황파악 진행현황"
+        assert fields["document_title_02"] == "※ 보고 일정은 별도 안내"
+
+
+def test_separator_records_section_ordinal_for_non_contiguous_filename(
+    tmp_path: Path,
+) -> None:
+    # Given: the second extracted section is named section2.xml.
+    section = tmp_path / "section2.xml"
+    section.write_text(SECTION, encoding="utf-8")
+
+    # When: its table fields are separated as the second package section.
+    _, table_fields = _section_decisions(
+        section,
+        load_separation_rules(None),
+        {},
+        section_index=1,
+    )
+
+    # Then: the table-fill contract uses the package ordinal, not filename suffix 2.
+    assert table_fields[0]["section_index"] == 1
 
 
 def test_separator_uses_structure_roles_and_keeps_user_values_replaceable() -> None:
@@ -196,7 +253,17 @@ def test_separator_uses_structure_roles_and_keeps_user_values_replaceable() -> N
         assert "다" in section_template
         assert "검토사항" in section_template
         assert "향후계획" in section_template
-        assert placeholders["디지털감독팀"] in section_template
+        department_entry = next(
+            entry
+            for entry in mapping["fields"]
+            if entry["sample_value"] == "디지털감독팀"
+        )
+        assert department_entry["replacement_mode"] == "table_cell"
+        assert department_entry["table"] == 2
+        assert department_entry["row"] == 1
+        assert department_entry["col"] == 1
+        assert "디지털감독팀" in section_template
+        assert placeholders["디지털감독팀"] not in section_template
         assert placeholders["사용자가 문서마다 작성하는 실제 검토 내용"] in section_template
 
 
@@ -291,6 +358,44 @@ def test_separator_assigns_globally_unique_field_ids_across_sections() -> None:
         assert {"section0.xml", "section1.xml"} <= sections
         assert "첫째 섹션의 실제 작성 내용입니다" in content["fields"].values()
         assert "둘째 섹션의 실제 작성 내용입니다" in content["fields"].values()
+
+
+def test_separator_records_paragraph_style_contract() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        source = root / "source.hwpx"
+        output = root / "template"
+        header = HEADER.replace(
+            "<hh:beginNum/>",
+            '<hh:paraPr id="7"><hh:margin>'
+            '<hc:intent xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" value="-3360"/>'
+            '<hc:left xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" value="0"/>'
+            "</hh:margin></hh:paraPr>",
+        )
+        section = SECTION.replace("<hp:p>", '<hp:p paraPrIDRef="7">')
+        with zipfile.ZipFile(source, "w") as package:
+            package.writestr("mimetype", "application/hwp+zip", compress_type=zipfile.ZIP_STORED)
+            package.writestr("Contents/header.xml", header)
+            package.writestr("Contents/content.hpf", CONTENT)
+            package.writestr("Contents/section0.xml", section)
+            package.writestr("settings.xml", "<settings/>")
+
+        result = separate_hwpx_template_content(
+            source, output, template_id="styled_template", institution="demo"
+        )
+
+        mapping = json.loads(result.placeholder_map.read_text(encoding="utf-8"))
+        assert mapping["section_paragraph_counts"] == {"section0.xml": 7}
+        assert all(
+            entry["layout_context"]["para_pr_id_ref"] == "7"
+            for entry in mapping["fields"]
+        )
+        assert all(isinstance(entry["paragraph_index"], int) for entry in mapping["fields"])
+        assert all(
+            entry["layout_context"]["cell_margin"] is None
+            for entry in mapping["fields"]
+            if entry["table"] is not None
+        )
 
 
 if __name__ == "__main__":

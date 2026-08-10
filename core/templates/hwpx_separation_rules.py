@@ -31,6 +31,7 @@ class TextLocation:
     table: int | None
     row: int | None
     col: int | None
+    paragraph_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

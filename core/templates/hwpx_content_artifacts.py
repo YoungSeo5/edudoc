@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .hwpx_content_classifier import COMMON_RULE_DESCRIPTIONS, COMMON_RULE_SET
+from .hwpx_layout_context import LAYOUT_CONTRACT
 from .hwpx_separation_rules import SeparationRules
 
 
@@ -23,7 +24,9 @@ def render_separation_review(
         "- Rendering removes `linesegarray` caches from changed sections so "
         "Hancom can recalculate text layout.",
         "- Rendering retains `linesegarray` caches in unchanged sections.",
-        "- Only selected `<hp:t>` text contents were replaced with placeholders.",
+        "- Non-table fields use `<hp:t>` placeholders; table fields use mapped cell coordinates.",
+        f"- Layout contract: `{LAYOUT_CONTRACT}`. Every placeholder records the "
+        "source layout it must keep, and rendering re-checks it.",
         f"- Common classification rule set: `{COMMON_RULE_SET}`.",
         "- Common fixed roles: " + "; ".join(COMMON_RULE_DESCRIPTIONS) + ".",
         f"- Template-specific location rules applied: {len(rules.rules)}.",
@@ -48,7 +51,7 @@ def render_separation_review(
         suffix = f" ({', '.join(location)})" if location else ""
         lines.append(
             f"- `{entry['field_id']}` -> `{entry['placeholder']}` "
-            f"[{entry['category']}]{suffix}"
+            f"[{entry['category']}; {entry.get('replacement_mode', 'hp_t_text')}]{suffix}"
         )
     lines.append("")
     return "\n".join(lines)
@@ -71,7 +74,7 @@ def update_template_content_separation(
         "content_sample": content_sample.name,
         "placeholder_map": placeholder_map.name,
         "review": review.name,
-        "replacement_mode": "hp_t_text_only",
+        "replacement_mode": placeholder_data["replacement_mode"],
         "classification_rule_set": placeholder_data["classification_rule_set"],
         "classification_rules": placeholder_data["classification_rules"],
         "template_rule_count": placeholder_data["template_rule_count"],
@@ -80,7 +83,12 @@ def update_template_content_separation(
     }
     data.setdefault("rendering_rules", {})
     data["rendering_rules"]["self_contained_base"] = "source.hwpx"
-    data["rendering_rules"]["replace_only_hp_t_text"] = True
+    data["rendering_rules"]["replace_only_hp_t_text"] = (
+        placeholder_data["replacement_mode"] == "hp_t_text_only"
+    )
+    data["rendering_rules"]["fill_mapped_table_cells"] = (
+        placeholder_data["replacement_mode"] in {"mixed", "table_cell_only"}
+    )
     data["rendering_rules"]["preserve_table_structure"] = True
     data["rendering_rules"]["preserve_linesegarray"] = False
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

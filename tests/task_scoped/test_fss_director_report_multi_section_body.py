@@ -88,7 +88,7 @@ def test_fss_body_numbers_multiple_section_titles_and_preserves_styles(
     expected = [
         "1. 추진 배경",
         "□ 첫 번째 본문",
-        " ◦ 세부 내용",
+        "◦ 세부 내용",
         "2. 주요 내용",
         "□ 두 번째 본문",
     ]

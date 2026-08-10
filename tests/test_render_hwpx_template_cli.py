@@ -15,12 +15,61 @@ FSS_VIRTUAL_ASSET = (
     / "금융감독원"
     / "금감원 원장보고 가상자산"
 )
+FSS_DIRECTOR = ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원장보고"
+FSS_DIRECTOR_CONTENT = (
+    ROOT / "tests" / "fixtures" / "template-content" / "fss_director_report.input.json"
+)
 
 
 def test_cli_renders_only_hwpx_from_template_content(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    content_path = tmp_path / "content.json"
+    content_path.write_text(
+        json.dumps(
+            {
+                "template_id": "fss_director_report",
+                "fields": json.loads(
+                    FSS_DIRECTOR_CONTENT.read_text(encoding="utf-8")
+                ),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "금감원_원장보고_테스트.hwpx"
+
+    exit_code = render_hwpx_template.main(
+        [
+            "--institution",
+            "금융감독원",
+            "--document-type",
+            "금감원 원장보고",
+            "--content",
+            str(content_path),
+            "--output",
+            str(output),
+            "--requester-name",
+            "오영서",
+        ]
+    )
+
+    summary = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert summary["ok"] is True
+    assert summary["template_id"] == "fss_director_report"
+    assert summary["missing_fields"] == []
+    assert summary["leftover_placeholders"] == []
+    assert output.is_file()
+    assert list(tmp_path.glob("*.md")) == []
+
+
+def test_cli_refuses_an_unapproved_template(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """승인 상태에서 내려온 템플릿으로는 최종 문서를 만들지 않는다."""
     output = tmp_path / "금감원_가상자산_테스트.hwpx"
 
     exit_code = render_hwpx_template.main(
@@ -33,17 +82,16 @@ def test_cli_renders_only_hwpx_from_template_content(
             str(FSS_VIRTUAL_ASSET / "content.sample.json"),
             "--output",
             str(output),
+            "--requester-name",
+            "오영서",
         ]
     )
 
     summary = json.loads(capsys.readouterr().out)
-    assert exit_code == 0
-    assert summary["ok"] is True
-    assert summary["template_id"] == "fss_virtual_asset_report"
-    assert summary["missing_fields"] == []
-    assert summary["leftover_placeholders"] == []
-    assert output.is_file()
-    assert list(tmp_path.glob("*.md")) == []
+    assert exit_code == 1
+    assert summary["ok"] is False
+    assert "approved institution template not found" in summary["error"]
+    assert not output.exists()
 
 
 def test_cli_rejects_content_for_a_different_template(
@@ -51,7 +99,7 @@ def test_cli_rejects_content_for_a_different_template(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     content = json.loads(
-        (FSS_VIRTUAL_ASSET / "content.sample.json").read_text(encoding="utf-8")
+        (FSS_DIRECTOR / "content.sample.json").read_text(encoding="utf-8")
     )
     content["template_id"] = "different_template"
     content_path = tmp_path / "content.json"
@@ -62,7 +110,7 @@ def test_cli_rejects_content_for_a_different_template(
             "--institution",
             "금융감독원",
             "--document-type",
-            "금감원 원장보고 가상자산",
+            "금감원 원장보고",
             "--content",
             str(content_path),
             "--output",

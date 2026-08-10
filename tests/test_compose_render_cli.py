@@ -9,6 +9,7 @@ import json
 import subprocess
 import sys
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -81,21 +82,28 @@ def test_render_plan_cli_passes_institution_options_to_hwpx_renderer(
             "금감원 원장보고 가상자산",
             "--template-content",
             str(content_path),
+            "--requester-name",
+            "오영서",
         ]
     )
 
     assert exit_code == 0
     assert received_docx_kwargs == [{}]
-    assert received_kwargs == [
-        {
-            "institution": "금융감독원",
-            "document_type": "금감원 원장보고 가상자산",
-            "template_content": TemplateContent(
-                template_id="fss_virtual_asset_report",
-                fields={"report_title": "기관 보고서"},
-            ),
-        }
-    ]
+    assert len(received_kwargs) == 1
+    passed = received_kwargs[0]
+    execution_context = passed.pop("execution_context")
+    assert passed == {
+        "institution": "금융감독원",
+        "document_type": "금감원 원장보고 가상자산",
+        "template_content": TemplateContent(
+            template_id="fss_virtual_asset_report",
+            fields={"report_title": "기관 보고서"},
+        ),
+    }
+    # 요청 시각은 실행 시점이라 값을 고정하지 않고 UTC 여부만 확인한다.
+    assert execution_context.requester_name == "오영서"
+    assert execution_context.requested_at.tzinfo is not None
+    assert execution_context.requested_at.utcoffset() == timedelta(0)
 
 
 def test_render_plan_cli_keeps_generic_hwpx_call_without_institution_options(
@@ -168,6 +176,8 @@ def test_render_plan_cli_rejects_institution_options_without_hwpx(
                 "금감원 원장보고 가상자산",
                 "--template-content",
                 str(content_path),
+                "--requester-name",
+                "오영서",
             ]
         )
 
@@ -207,6 +217,8 @@ def test_render_plan_cli_rejects_unreadable_template_content_file(
                 "금감원 원장보고 가상자산",
                 "--template-content",
                 str(content_path),
+                "--requester-name",
+                "오영서",
             ]
         )
 

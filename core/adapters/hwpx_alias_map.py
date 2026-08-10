@@ -53,6 +53,8 @@ class TextRule:
     single_paragraph: bool
     single_sentence: bool
     forbidden_suffix: str | None = None
+    prefix: str = ""
+    suffix: str = ""
 
     def format_value(self, alias: str, value: JsonValue) -> str:
         if not isinstance(value, str) or not value.strip():
@@ -79,7 +81,7 @@ class TextRule:
                 f"text field {alias!r} must not include suffix "
                 f"{self.forbidden_suffix!r}"
             )
-        return value
+        return f"{self.prefix}{value}{self.suffix}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,15 +90,35 @@ class FitConstraint:
 
 
 @dataclass(frozen=True, slots=True)
+class FieldMetadataSource:
+    alias: str
+    suffix: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BlockMetadataSource:
+    block: str
+    level: int
+
+
+@dataclass(frozen=True, slots=True)
+class RequestedAtMetadataSource:
+    pass
+
+
+MetadataSource: TypeAlias = (
+    FieldMetadataSource | BlockMetadataSource | RequestedAtMetadataSource
+)
+
+
+@dataclass(frozen=True, slots=True)
 class MetadataContract:
-    report_date_field: str
-    description_field: str
-    subject_block: str
-    subject_level: int
+    title: FieldMetadataSource
+    report_date: FieldMetadataSource | RequestedAtMetadataSource
+    description: FieldMetadataSource
+    subject: FieldMetadataSource | BlockMetadataSource
     subject_separator: str
-    keyword_report_type_field: str
-    keyword_department_field: str
-    keyword_department_suffix: str
+    keywords: tuple[FieldMetadataSource | BlockMetadataSource, ...]
     keyword_separator: str
 
 
@@ -155,24 +177,17 @@ class AliasMap:
             referenced.add(self.title_field_id)
         return frozenset(referenced)
 
-    def resolve(
+    def flatten_content(
         self,
         content: Mapping[str, JsonValue],
         field_ids: frozenset[str],
-    ) -> tuple[dict[str, JsonValue], list[str]]:
-        """Flatten ``content`` and key it by ``field_id``.
+    ) -> dict[str, JsonValue]:
+        """Key ``content`` by alias path once, before any rule is applied.
 
-        Returns ``(resolved, unknown_keys)``. Keys that are already a valid
-        ``field_id`` pass through unchanged, so resolving a resolved mapping is a
-        no-op and the renderer may call this more than once.
+        This is the only pass over the human-authored mapping: every later
+        reader (render values, document metadata) works from the result.
         """
-        resolved: dict[str, JsonValue] = {}
-        source_path: dict[str, str] = {}
-        unknown: list[str] = []
         flattened: dict[str, JsonValue] = {}
-        alias_by_field = {
-            field_id: alias for alias, field_id in self.aliases.items()
-        }
         for path, value in content.items():
             block = self.blocks.get(path)
             if path in field_ids:
@@ -182,7 +197,20 @@ class AliasMap:
                 flattened[block.anchor] = value
             else:
                 flattened.update(flatten({path: value}))
+        return flattened
 
+    def resolve_flattened(
+        self,
+        flattened: Mapping[str, JsonValue],
+        field_ids: frozenset[str],
+    ) -> tuple[dict[str, JsonValue], list[str]]:
+        """Apply the choice and text rules and key the result by ``field_id``."""
+        resolved: dict[str, JsonValue] = {}
+        source_path: dict[str, str] = {}
+        unknown: list[str] = []
+        alias_by_field = {
+            field_id: alias for alias, field_id in self.aliases.items()
+        }
         for path, value in flattened.items():
             # 선택 규칙은 사람용 이름으로 연결되므로 field_id로 바꾸기 전에 완성한다.
             choice = self.choices.get(path)
@@ -208,6 +236,22 @@ class AliasMap:
             resolved[field_id] = value
             source_path[field_id] = path
         return resolved, sorted(unknown)
+
+    def resolve(
+        self,
+        content: Mapping[str, JsonValue],
+        field_ids: frozenset[str],
+    ) -> tuple[dict[str, JsonValue], list[str]]:
+        """Flatten ``content`` and key it by ``field_id``.
+
+        Returns ``(resolved, unknown_keys)``. Keys that are already a valid
+        ``field_id`` pass through unchanged, so resolving a resolved mapping is a
+        no-op and the renderer may call this more than once.
+        """
+        return self.resolve_flattened(
+            self.flatten_content(content, field_ids),
+            field_ids,
+        )
 
 
 def flatten(content: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
@@ -308,6 +352,7 @@ def _parse_metadata_contract(
     raw: JsonValue,
     aliases: Mapping[str, str],
     blocks: Mapping[str, RepeatBlock],
+    title_alias: str | None,
 ) -> MetadataContract:
     if not isinstance(raw, dict):
         raise AliasMapError(f"{path}: metadata must be an object")
@@ -316,7 +361,7 @@ def _parse_metadata_contract(
     if missing:
         raise AliasMapError(f"{path}: metadata requires {missing}")
 
-    def read_field(context: str, value: JsonValue) -> tuple[str, str]:
+    def read_field(context: str, value: JsonValue) -> FieldMetadataSource:
         if not isinstance(value, dict):
             raise AliasMapError(
                 f"{path}: metadata {context} must be an object"
@@ -332,9 +377,9 @@ def _parse_metadata_contract(
             raise AliasMapError(
                 f"{path}: metadata {context} suffix must be a string"
             )
-        return alias, suffix
+        return FieldMetadataSource(alias=alias, suffix=suffix)
 
-    def read_block(context: str, value: JsonValue) -> tuple[str, int]:
+    def read_block(context: str, value: JsonValue) -> BlockMetadataSource:
         if not isinstance(value, dict):
             raise AliasMapError(
                 f"{path}: metadata {context} must be an object"
@@ -355,10 +400,42 @@ def _parse_metadata_contract(
                 f"{path}: metadata {context} references unknown level "
                 f"{level!r}"
             )
-        return name, level
+        return BlockMetadataSource(block=name, level=level)
 
-    report_date_field, _ = read_field("report_date", raw["report_date"])
-    description_field, _ = read_field("description", raw["description"])
+    def read_source(
+        context: str,
+        value: JsonValue,
+        *,
+        allow_requested_at: bool = False,
+    ) -> MetadataSource:
+        if not isinstance(value, dict):
+            raise AliasMapError(f"{path}: metadata {context} must be an object")
+        if "field" in value:
+            return read_field(context, value)
+        if "block" in value:
+            return read_block(context, value)
+        if allow_requested_at and value.get("context") == "requested_at":
+            return RequestedAtMetadataSource()
+        raise AliasMapError(
+            f"{path}: metadata {context} requires field, block, or requested_at"
+        )
+
+    title_raw = raw.get("title")
+    if title_raw is None:
+        if title_alias is None:
+            raise AliasMapError(f"{path}: metadata requires title")
+        title = FieldMetadataSource(alias=title_alias)
+    else:
+        title = read_field("title", title_raw)
+
+    report_date = read_source(
+        "report_date",
+        raw["report_date"],
+        allow_requested_at=True,
+    )
+    if isinstance(report_date, BlockMetadataSource):
+        raise AliasMapError(f"{path}: metadata report_date cannot use a block")
+    description = read_field("description", raw["description"])
 
     subject_raw = raw["subject"]
     if not isinstance(subject_raw, dict):
@@ -368,7 +445,9 @@ def _parse_metadata_contract(
         raise AliasMapError(
             f"{path}: metadata subject separator must be a string"
         )
-    subject_block, subject_level = read_block("subject", subject_raw)
+    subject = read_source("subject", subject_raw)
+    if isinstance(subject, RequestedAtMetadataSource):
+        raise AliasMapError(f"{path}: metadata subject cannot use requested_at")
 
     keywords_raw = raw["keywords"]
     if not isinstance(keywords_raw, dict):
@@ -379,32 +458,23 @@ def _parse_metadata_contract(
         raise AliasMapError(
             f"{path}: metadata keywords separator must be a string"
         )
-    if not isinstance(sources_raw, list) or len(sources_raw) != 3:
-        raise AliasMapError(
-            f"{path}: metadata keywords requires three sources"
-        )
-    report_type_field, _ = read_field(
-        "keywords.sources[0]", sources_raw[0]
-    )
-    department_field, department_suffix = read_field(
-        "keywords.sources[1]", sources_raw[1]
-    )
-    keyword_block, keyword_level = read_block(
-        "keywords.sources[2]", sources_raw[2]
-    )
-    if (keyword_block, keyword_level) != (subject_block, subject_level):
-        raise AliasMapError(
-            f"{path}: metadata keywords must reuse the subject block and level"
-        )
+    if not isinstance(sources_raw, list) or not sources_raw:
+        raise AliasMapError(f"{path}: metadata keywords requires sources")
+    keywords: list[FieldMetadataSource | BlockMetadataSource] = []
+    for index, source_raw in enumerate(sources_raw):
+        source = read_source(f"keywords.sources[{index}]", source_raw)
+        if isinstance(source, RequestedAtMetadataSource):
+            raise AliasMapError(
+                f"{path}: metadata keywords cannot use requested_at"
+            )
+        keywords.append(source)
     return MetadataContract(
-        report_date_field=report_date_field,
-        description_field=description_field,
-        subject_block=subject_block,
-        subject_level=subject_level,
+        title=title,
+        report_date=report_date,
+        description=description,
+        subject=subject,
         subject_separator=subject_separator,
-        keyword_report_type_field=report_type_field,
-        keyword_department_field=department_field,
-        keyword_department_suffix=department_suffix,
+        keywords=tuple(keywords),
         keyword_separator=keywords_separator,
     )
 
@@ -507,10 +577,18 @@ def load_alias_map(
                 f"{path}: text rule {alias!r} forbidden_suffix "
                 "must be a non-empty string"
             )
+        prefix = rule_raw.get("prefix", "")
+        suffix = rule_raw.get("suffix", "")
+        if not isinstance(prefix, str) or not isinstance(suffix, str):
+            raise AliasMapError(
+                f"{path}: text rule {alias!r} prefix and suffix must be strings"
+            )
         text_rules[alias] = TextRule(
             single_paragraph=single_paragraph,
             single_sentence=single_sentence,
             forbidden_suffix=forbidden_suffix,
+            prefix=prefix,
+            suffix=suffix,
         )
 
     fit_constraints_raw = raw.get("fit_constraints", {})
@@ -645,7 +723,7 @@ def load_alias_map(
 
     metadata_raw = raw.get("metadata")
     metadata = (
-        _parse_metadata_contract(path, metadata_raw, bound, blocks)
+        _parse_metadata_contract(path, metadata_raw, bound, blocks, title_alias)
         if metadata_raw is not None
         else None
     )

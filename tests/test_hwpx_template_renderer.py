@@ -11,7 +11,6 @@ import re
 import sys
 import tempfile
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -19,13 +18,15 @@ import hwpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from xml.etree import ElementTree
+
 from core.adapters.hwpx_alias_map import AliasMap, RepeatBlock
+from core.templates.hwpx_layout_context import LAYOUT_CONTRACT, DocumentLayout
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
-    RenderExecutionContext,
     fill_template_sections,
     load_content_fields,
-    orchestrate_hwpx_render,
+    render_candidate_roundtrip,
     render_repeat_block,
     snapshot_source_hwpx,
     validate_hwpx_output,
@@ -39,10 +40,6 @@ REGISTERED_FSS_DIRS = (
     ROOT / "templates" / "institutions" / "금융감독원" / "금감원 원페이지",
 )
 BROTHER_HWPX = ROOT / "references" / "document-types" / "public-plan" / "브라더 공공기관 보고서 양식.hwpx"
-EXECUTION_CONTEXT = RenderExecutionContext(
-    "테스트 요청자",
-    datetime(2026, 8, 3, tzinfo=timezone.utc),
-)
 
 
 def test_fill_fss_full_content_has_no_leftover() -> None:
@@ -69,12 +66,61 @@ def test_fill_reports_missing_and_keeps_placeholder() -> None:
     assert "body_paragraph_01" in result.leftover_placeholders
 
 
-def _write_template_dir(tmp: Path, template_xml: str, field_id: str) -> Path:
+def _parseable(template_xml: str) -> str:
+    """네임스페이스 선언 없이 <hp:p>만 쓴 합성 조각도 파싱할 수 있게 감싼다."""
+    try:
+        ElementTree.fromstring(template_xml)
+    except ElementTree.ParseError:
+        return (
+            '<hp:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+            f"{template_xml}</hp:sec>"
+        )
+    return template_xml
+
+
+def _write_template_dir(
+    tmp: Path,
+    template_xml: str,
+    field_id: str,
+    header_xml: bytes | None = None,
+) -> Path:
     (tmp / "template").mkdir(parents=True)
     (tmp / "template" / "section0.template.xml").write_text(template_xml, encoding="utf-8")
+    if header_xml is None:
+        header_xml = zipfile.ZipFile(BROTHER_HWPX).read("Contents/header.xml")
+    # 합성 템플릿도 분리 단계와 같은 공개 API로 layout 계약을 기록한다.
+    parseable = _parseable(template_xml)
+    paragraphs = [
+        node
+        for node in ElementTree.fromstring(parseable).iter()
+        if node.tag.rsplit("}", 1)[-1] == "p"
+    ]
+    placeholder = f"{{{{{field_id}}}}}"
+    field = {
+        "field_id": field_id,
+        "placeholder": placeholder,
+        "section": "section0.xml",
+        "table": None,
+        "row": None,
+        "col": None,
+        "paragraph_index": next(
+            index
+            for index, paragraph in enumerate(paragraphs)
+            if placeholder in "".join(paragraph.itertext())
+        ),
+    }
+    layout = DocumentLayout.read(parseable, header_xml)
+    field["layout_context"] = layout.context_for(field)
     (tmp / "placeholder_map.json").write_text(
-        json.dumps({"fields": [{"field_id": field_id, "placeholder": f"{{{{{field_id}}}}}",
-                                "section": "section0.xml"}]}, ensure_ascii=False),
+        json.dumps(
+            {
+                "layout_contract": LAYOUT_CONTRACT,
+                "section_paragraph_counts": {"section0.xml": len(paragraphs)},
+                "paragraph_style_margins": layout.margins_of_referenced_styles([field]),
+                "fields": [field],
+            },
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
     return tmp
@@ -162,11 +208,10 @@ def test_registered_fss_templates_render_text_shapes_without_placeholders() -> N
             with tempfile.TemporaryDirectory() as tmp:
                 output = Path(tmp) / f"rendered-{index}.hwpx"
 
-                result = orchestrate_hwpx_render(
+                result = render_candidate_roundtrip(
                     template_dir,
                     content,
                     output,
-                    execution_context=EXECUTION_CONTEXT,
                 )
 
                 assert result.leftover_placeholders == []
@@ -196,7 +241,7 @@ def test_render_replaces_only_section_in_base_hwpx() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), template_xml, "demo_field")
         out = Path(tmp) / "rendered.hwpx"
-        result = orchestrate_hwpx_render(tmp, {"demo_field": "RENDER_OK"}, out, base_hwpx=BROTHER_HWPX)
+        result = render_candidate_roundtrip(tmp, {"demo_field": "RENDER_OK"}, out, base_hwpx=BROTHER_HWPX)
 
         assert result.leftover_placeholders == []
         assert result.filled_fields == ["demo_field"]
@@ -221,7 +266,7 @@ def test_self_contained_template_renders_without_external_base() -> None:
         assert (tmp / "source.hwpx").read_bytes() == BROTHER_HWPX.read_bytes()
 
         out = Path(tmp) / "rendered.hwpx"
-        result = orchestrate_hwpx_render(tmp, {"demo_field": "RENDER_OK"}, out)  # no base_hwpx
+        result = render_candidate_roundtrip(tmp, {"demo_field": "RENDER_OK"}, out)  # no base_hwpx
 
         assert result.leftover_placeholders == []
         with zipfile.ZipFile(out) as z:
@@ -238,7 +283,7 @@ def test_render_validates_output_by_default() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), template_xml, "demo_field")
         out = Path(tmp) / "rendered.hwpx"
-        orchestrate_hwpx_render(tmp, {"demo_field": "OK"}, out, base_hwpx=BROTHER_HWPX)  # validate=True
+        render_candidate_roundtrip(tmp, {"demo_field": "OK"}, out, base_hwpx=BROTHER_HWPX)  # validate=True
         validate_hwpx_output(out)  # explicit: no error means strict validation passed
 
 
@@ -274,7 +319,7 @@ def test_render_repairs_missing_hwpunitchar_root_namespace(tmp_path: Path) -> No
     template_dir = _write_template_dir(tmp_path / "candidate", template_xml, "demo_field")
     output = tmp_path / "rendered.hwpx"
 
-    orchestrate_hwpx_render(
+    render_candidate_roundtrip(
         template_dir,
         {"demo_field": "RENDER_OK"},
         output,
@@ -292,7 +337,7 @@ def test_render_without_any_base_raises() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp = _write_template_dir(Path(tmp), "<hp:p><hp:t>{{x}}</hp:t></hp:p>", "x")
         try:
-            orchestrate_hwpx_render(tmp, {"x": "v"}, Path(tmp) / "out.hwpx")
+            render_candidate_roundtrip(tmp, {"x": "v"}, Path(tmp) / "out.hwpx")
         except HwpxTemplateRenderError as exc:
             assert "self-contained" in str(exc)
         else:
@@ -331,7 +376,7 @@ _REPEAT_ITEMS = {"body_paragraph_01": [[0, "가"], [1, "나"]]}
 def test_repeat_block_keeps_deleting_blank_paragraphs_between_levels() -> None:
     blank = '<hp:p id="2" paraPrIDRef="1"><hp:run charPrIDRef="1"><hp:t></hp:t></hp:run></hp:p>'
 
-    filled_xml, filled = render_repeat_block(
+    filled_xml, filled, _ = render_repeat_block(
         _repeat_xml(blank), _REPEAT_ITEMS, _repeat_alias_map().blocks
     )
 

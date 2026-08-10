@@ -4,6 +4,7 @@ import html
 import json
 import re
 import xml.etree.ElementTree as ET
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,14 @@ from .hwpx_content_classifier import (
     build_text_contexts,
     classify_text,
     content_category,
+)
+from .hwpx_layout_context import (
+    LAYOUT_CONTEXT_KEY,
+    LAYOUT_CONTRACT,
+    STYLE_MARGIN_KEY,
+    DocumentLayout,
+    paragraph_anchor,
+    verify_recorded_layout,
 )
 from .hwpx_package_extractor import HwpxExtractionResult, extract_hwpx_template
 from .hwpx_separation_rules import (
@@ -39,6 +48,12 @@ _T_NODE_RE = re.compile(
     r"(?P<body>.*?)"
     r"(</(?P=open_prefix)?t>)",
     re.S,
+)
+_LEADING_FWSPACE_RE = re.compile(
+    r"^(?P<prefix>(?:\s*<(?:[A-Za-z_][\w.-]*:)?fwSpace\b[^>]*/>)+)"
+)
+_TRAILING_FWSPACE_RE = re.compile(
+    r"(?P<suffix>(?:<(?:[A-Za-z_][\w.-]*:)?fwSpace\b[^>]*/>\s*)+)$"
 )
 
 
@@ -82,18 +97,29 @@ def separate_hwpx_template_content(
     section_results = []
     fields: dict[str, Any] = {}
     placeholder_entries = []
+    section_paragraph_counts: dict[str, int] = {}
+    style_margins: dict[str, Any] = {}
 
     # 흐름 4: 모든 section의 <hp:t>를 문서 순서대로 분류한다.
     # counters를 section 밖에 두어 여러 section에서도 field_id가 중복되지 않는다.
     field_id_counters: dict[str, int] = {}
-    for raw_section in sorted((root / "raw").glob("section*.xml"), key=_section_sort_key):
-        decisions = _section_decisions(raw_section, rules, field_id_counters)
+    for section_index, raw_section in enumerate(
+        sorted((root / "raw").glob("section*.xml"), key=_section_sort_key)
+    ):
+        decisions, table_fields = _section_decisions(
+            raw_section,
+            rules,
+            field_id_counters,
+            section_index,
+        )
 
         # CONTENT로 판정한 텍스트만 {{field_id}}로 바꾸고, FIXED 텍스트와
         # XML 구조·스타일 ID는 원문 그대로 유지한다.
         template_xml, applied = _apply_decisions(raw_section.read_text(encoding="utf-8"), decisions)
+        applied.extend(table_fields)
         template_section = root / "template" / raw_section.name.replace(".xml", ".template.xml")
         template_section.write_text(template_xml, encoding="utf-8")
+        section_paragraph_counts[raw_section.name] = _paragraph_count(template_xml)
         section_results.append(
             {
                 "section": raw_section.name,
@@ -101,9 +127,18 @@ def separate_hwpx_template_content(
                 "placeholder_count": len(applied),
             }
         )
+        # placeholder가 원본에서 물려받은 서식을 그대로 기록한다. 어떤 서식이
+        # 계약에 들어가는지는 DocumentLayout.context_for 한 곳이 정한다.
+        layout = DocumentLayout.read(
+            raw_section.read_bytes(),
+            (root / "raw" / "header.xml").read_bytes(),
+        )
         for item in applied:
+            item[LAYOUT_CONTEXT_KEY] = layout.context_for(item)
             fields[item["field_id"]] = item["sample_value"]
             placeholder_entries.append(item)
+        # 스타일 정의는 여러 placeholder가 공유하므로 문서 단위로 한 번만 기록한다.
+        style_margins.update(layout.margins_of_referenced_styles(applied))
 
     # 흐름 5: 같은 분리 결과를 세 관점으로 저장한다.
     # content.sample.json은 원본 예시 값, placeholder_map.json은 위치 계약,
@@ -128,10 +163,13 @@ def separate_hwpx_template_content(
         json.dumps(
             {
                 "template_id": template_id,
-                "replacement_mode": "hp_t_text_only",
+                "replacement_mode": _replacement_mode(placeholder_entries),
+                "layout_contract": LAYOUT_CONTRACT,
                 "classification_rule_set": COMMON_RULE_SET,
                 "classification_rules": list(COMMON_RULE_DESCRIPTIONS),
                 "template_rule_count": len(rules.rules),
+                "section_paragraph_counts": section_paragraph_counts,
+                STYLE_MARGIN_KEY: style_margins,
                 "fields": placeholder_entries,
             },
             ensure_ascii=False,
@@ -140,6 +178,7 @@ def separate_hwpx_template_content(
         + "\n",
         encoding="utf-8",
     )
+    _validate_placeholder_paragraph_contract(root)
     review.write_text(
         render_separation_review(template_id, section_results, placeholder_entries, rules),
         encoding="utf-8",
@@ -162,18 +201,73 @@ def separate_hwpx_template_content(
 # 한 section을 읽어 각 텍스트 노드에 "유지/교체" 결정을 붙인다.
 # 이 단계는 아직 XML을 변경하지 않고 결정 목록만 만든다.
 def _section_decisions(
-    path: Path, rules: SeparationRules, counters: dict[str, int]
-) -> list[dict[str, Any]]:
+    path: Path,
+    rules: SeparationRules,
+    counters: dict[str, int],
+    section_index: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     root = ET.fromstring(path.read_bytes())
     decisions = []
-    for context in build_text_contexts(root, path.name):
+    contexts = build_text_contexts(root, path.name)
+    table_contexts: dict[tuple[int, int, int], list[Any]] = defaultdict(list)
+    for context in contexts:
+        location = context.location
+        if (
+            location.table is not None
+            and location.row is not None
+            and location.col is not None
+        ):
+            table_contexts[(location.table, location.row, location.col)].append(context)
+
+    table_fields = []
+    seen_table_cells: set[tuple[int, int, int]] = set()
+    for context in contexts:
         category = content_category(context.normalized_text)
         role = classify_text(context, rules)
         candidate_field_id = None
-        if context.normalized_text:
+        is_table_text = context.location.table is not None
+        table_key = (
+            context.location.table,
+            context.location.row,
+            context.location.col,
+        )
+        if (
+            is_table_text
+            and None not in table_key
+            and table_key not in seen_table_cells
+        ):
+            seen_table_cells.add(table_key)
+            table, row, col = table_key
+            cell_contexts = table_contexts[(table, row, col)]
+            sample_value = _table_cell_sample_value(cell_contexts)
+            if sample_value and _table_cell_is_content(cell_contexts, rules):
+                category = content_category(sample_value)
+                counters[category] = counters.get(category, 0) + 1
+                field_id = f"{category}_{counters[category]:02d}"
+                table_fields.append(
+                    {
+                        "field_id": field_id,
+                        "placeholder": f"{{{{{field_id}}}}}",
+                        "sample_value": sample_value,
+                        "category": category,
+                        "replacement_mode": "table_cell",
+                        "section": path.name,
+                        "section_index": section_index,
+                        "text_node_index": cell_contexts[0].location.text_node_index,
+                        "table": table,
+                        "row": row,
+                        "col": col,
+                        "paragraph_index": cell_contexts[0].location.paragraph_index,
+                    }
+                )
+        if context.normalized_text and not is_table_text:
             counters[category] = counters.get(category, 0) + 1
             candidate_field_id = f"{category}_{counters[category]:02d}"
-        replace = bool(context.normalized_text) and role is TextRole.CONTENT
+        replace = (
+            bool(context.normalized_text)
+            and not is_table_text
+            and role is TextRole.CONTENT
+        )
         field_id = candidate_field_id if replace else None
         location = context.location
         decisions.append(
@@ -191,10 +285,12 @@ def _section_decisions(
                     "table": location.table,
                     "row": location.row,
                     "col": location.col,
+                    "paragraph_index": location.paragraph_index,
                 },
             }
         )
-    return decisions
+
+    return decisions, table_fields
 
 
 # 결정 목록을 원본 XML 문자열의 <hp:t> 순서와 맞춰 적용한다.
@@ -211,8 +307,11 @@ def _apply_decisions(xml: str, decisions: list[dict[str, Any]]) -> tuple[str, li
             parts.append(match.group(1))
         elif decision and decision["replace"]:
             placeholder = html.escape(decision["placeholder"], quote=False)
+            leading, trailing = _edge_fwspace_xml(match.group("body") or "")
             parts.append(match.group(4))
+            parts.append(leading)
             parts.append(placeholder)
+            parts.append(trailing)
             parts.append(match.group(8))
             applied.append(
                 {
@@ -220,11 +319,13 @@ def _apply_decisions(xml: str, decisions: list[dict[str, Any]]) -> tuple[str, li
                     "placeholder": decision["placeholder"],
                     "sample_value": decision["original_text"],
                     "category": decision["category"],
+                    "replacement_mode": "hp_t_text",
                     "section": decision["location"]["section"],
                     "text_node_index": decision["text_node_index"],
                     "table": decision["location"].get("table"),
                     "row": decision["location"].get("row"),
                     "col": decision["location"].get("col"),
+                    "paragraph_index": decision["location"].get("paragraph_index"),
                 }
             )
         else:
@@ -233,6 +334,117 @@ def _apply_decisions(xml: str, decisions: list[dict[str, Any]]) -> tuple[str, li
         text_index += 1
     parts.append(xml[cursor:])
     return "".join(parts), applied
+
+
+def _edge_fwspace_xml(body: str) -> tuple[str, str]:
+    leading_match = _LEADING_FWSPACE_RE.match(body)
+    trailing_match = _TRAILING_FWSPACE_RE.search(body)
+    return (
+        leading_match.group("prefix") if leading_match else "",
+        trailing_match.group("suffix") if trailing_match else "",
+    )
+
+
+def _table_cell_is_content(
+    contexts: list[Any],
+    rules: SeparationRules,
+) -> bool:
+    configured = [
+        rules.role_for(context.location)
+        for context in contexts
+        if rules.role_for(context.location) is not None
+    ]
+    if configured:
+        return TextRole.CONTENT in configured
+
+    first = contexts[0]
+    row = first.location.row
+    col = first.location.col
+    rows = first.table_rows or 0
+    if row is None or col is None:
+        return False
+    if rows <= 1:
+        return any(classify_text(context, rules) is TextRole.CONTENT for context in contexts)
+    if row == 0:
+        return _looks_like_table_header_value(_table_cell_sample_value(contexts))
+    return col > 0
+
+
+def _table_cell_sample_value(contexts: list[Any]) -> str:
+    return " ".join(
+        context.normalized_text
+        for context in contexts
+        if context.normalized_text
+    )
+
+
+def _looks_like_table_header_value(value: str) -> bool:
+    return bool(
+        re.fullmatch(
+            r"(?:\d{1,2}/)?\d{1,2}\s*\([월화수목금토일]\)",
+            value,
+        )
+    )
+
+
+def _replacement_mode(entries: list[dict[str, Any]]) -> str:
+    modes = {entry.get("replacement_mode", "hp_t_text") for entry in entries}
+    if not modes or modes == {"hp_t_text"}:
+        return "hp_t_text_only"
+    if modes == {"table_cell"}:
+        return "table_cell_only"
+    return "mixed"
+
+
+def _validate_placeholder_paragraph_contract(template_dir: Path) -> None:
+    """기록한 layout context가 원본과 템플릿 양쪽에서 모두 성립하는지 확인한다."""
+    mapping = json.loads(
+        (template_dir / "placeholder_map.json").read_text(encoding="utf-8")
+    )
+    for label, directory, suffix in (
+        ("raw", template_dir / "raw", ".xml"),
+        ("template", template_dir / "template", ".template.xml"),
+    ):
+        verify_recorded_layout(
+            mapping,
+            lambda section, d=directory, s=suffix: (
+                d / section.replace(".xml", s)
+            ).read_bytes(),
+            (directory / "header.xml").read_bytes(),
+            where=f"separated {label}",
+        )
+    _validate_placeholder_stays_in_its_paragraph(template_dir, mapping)
+
+
+def _validate_placeholder_stays_in_its_paragraph(
+    template_dir: Path,
+    mapping: dict[str, Any],
+) -> None:
+    for section in mapping["section_paragraph_counts"]:
+        paragraphs = _paragraphs(
+            (
+                template_dir / "template" / section.replace(".xml", ".template.xml")
+            ).read_text(encoding="utf-8")
+        )
+        for field in mapping["fields"]:
+            if (
+                field["section"] != section
+                or field.get("replacement_mode") == "table_cell"
+            ):
+                continue
+            paragraph = paragraphs[paragraph_anchor(field)]
+            if field["placeholder"] not in "".join(paragraph.itertext()):
+                raise ValueError(
+                    f"placeholder moved from paragraph for {field['field_id']}"
+                )
+
+
+def _paragraph_count(xml: str) -> int:
+    return len(_paragraphs(xml))
+
+
+def _paragraphs(xml: str) -> list[ET.Element]:
+    return [node for node in ET.fromstring(xml).iter() if node.tag.rsplit("}", 1)[-1] == "p"]
 
 
 def _section_sort_key(path: Path) -> int:

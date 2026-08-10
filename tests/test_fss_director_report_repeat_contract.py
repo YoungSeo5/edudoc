@@ -132,9 +132,9 @@ def test_raw_contract_renders_repeat_block_and_preserves_fixed_form(
     assert alias_map.blocks["본문"].levels == {
         0: ("content_01", ""),
         1: ("body_paragraph_01", "□ "),
-        2: ("body_bullet_01", " ◦ "),
-        3: ("stat_note_01", "      * "),
-        4: ("detail_note_01", "         † "),
+        2: ("body_bullet_01", "◦ "),
+        3: ("stat_note_01", "* "),
+        4: ("detail_note_01", "† "),
     }
     assert result.filled_fields == [
         "body_bullet_01",
@@ -173,10 +173,10 @@ def test_raw_contract_renders_repeat_block_and_preserves_fixed_form(
     repeated = [
         "1. 추진 배경",
         "□ 최근 가상자산 시장 변동성이 확대됨",
-        " ◦ 이상거래 탐지 건수가 전분기 대비 증가",
-        " ◦ 미이행 사업자에 시정 조치를 요구함",
-        "      * 2026년 상반기 누적 1,204건",
-        "         † 자체 탐지 기준 적용",
+        "◦ 이상거래 탐지 건수가 전분기 대비 증가",
+        "◦ 미이행 사업자에 시정 조치를 요구함",
+        "* 2026년 상반기 누적 1,204건",
+        "† 자체 탐지 기준 적용",
         "2. 주요 내용",
         "□ 상시감시 체계 고도화 세부 방안을 마련함",
     ]

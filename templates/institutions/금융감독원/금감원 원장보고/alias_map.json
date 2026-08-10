@@ -117,15 +117,15 @@
         },
         "2": {
           "field": "body_bullet_01",
-          "prefix": " ◦ "
+          "prefix": "◦ "
         },
         "3": {
           "field": "stat_note_01",
-          "prefix": "      * "
+          "prefix": "* "
         },
         "4": {
           "field": "detail_note_01",
-          "prefix": "         † "
+          "prefix": "† "
         }
       }
     }

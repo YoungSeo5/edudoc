@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +29,7 @@ if str(ROOT) not in sys.path:
 
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
+    RenderExecutionContext,
     load_template_content,
 )
 from core.compose.render import (  # noqa: E402
@@ -64,6 +66,7 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
     parser.add_argument("--institution", help="승인된 HWPX 기관 템플릿의 기관명")
     parser.add_argument("--document-type", help="승인된 HWPX 기관 템플릿의 문서 유형")
     parser.add_argument("--template-content", type=Path, help="기관 템플릿 content.json 경로")
+    parser.add_argument("--requester-name", help="문서 생성 요청자 이름")
     args = parser.parse_args(argv)
     failures_dir = DEFAULT_FAILURES_DIR if failures_dir is None else failures_dir
 
@@ -71,12 +74,18 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
         raise SystemExit(f"ERROR: plan 파일 없음: {args.plan}")
 
     formats = _parse_formats(args.to)
-    institution_options = (args.institution, args.document_type, args.template_content)
+    institution_options = (
+        args.institution,
+        args.document_type,
+        args.template_content,
+        args.requester_name,
+    )
     has_institution_options = any(value is not None for value in institution_options)
     has_all_institution_options = all(value is not None for value in institution_options)
     if has_institution_options and not has_all_institution_options:
         parser.error("institution template options must be provided together: "
-                     "--institution, --document-type, --template-content")
+                     "--institution, --document-type, --template-content, "
+                     "--requester-name")
     if has_all_institution_options and "hwpx" not in formats:
         parser.error("institution template options require hwpx in --to")
 
@@ -104,6 +113,10 @@ def main(argv: list[str] | None = None, *, failures_dir: Path | None = None) -> 
                 "institution": args.institution,
                 "document_type": args.document_type,
                 "template_content": template_content,
+                "execution_context": RenderExecutionContext(
+                    requester_name=args.requester_name,
+                    requested_at=datetime.now(timezone.utc),
+                ),
             }
         probs, result = _RENDERERS[fmt](report, md_path, out_path, **kwargs)
         problems = probs  # same plan -> same validation each time

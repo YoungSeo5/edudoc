@@ -30,7 +30,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--document-type", required=True, help="문서 유형")
     parser.add_argument("--content", required=True, type=Path, help="템플릿 content.json")
     parser.add_argument("--output", required=True, type=Path, help="출력 HWPX")
-    parser.add_argument("--requester-name", help="문서 생성 요청자 이름")
+    # argparse required가 아닌 이유: 누락도 JSON 요약({"ok": false, ...})으로 보고한다.
+    parser.add_argument(
+        "--requester-name",
+        help="문서 생성 요청자 이름. 최종 문서 생성에 반드시 필요하며 "
+        "content.hpf 작성자·최종저장자로 기록된다",
+    )
     args = parser.parse_args(argv)
     requested_at = datetime.now(timezone.utc)
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from core.adapters.hwpx_template_renderer import (
     HwpxTemplateRenderError,
+    RenderExecutionContext,
     TemplateContent,
     orchestrate_hwpx_render,
 )
@@ -45,6 +46,7 @@ def render_report_to_hwpx(
     institution: str | None = None,
     document_type: str | None = None,
     template_content: TemplateContent | None = None,
+    execution_context: RenderExecutionContext | None = None,
 ):
     """Validate -> clean Markdown -> HWPX. Returns (problems, export_result).
 
@@ -58,6 +60,10 @@ def render_report_to_hwpx(
         raise ValueError("institution and document_type must be provided together")
     if institution is not None and template_content is None:
         raise ValueError("template_content is required for institution template rendering")
+    if institution is not None and execution_context is None:
+        raise ValueError(
+            "execution_context is required for institution template rendering"
+        )
 
     problems = validate_report(report)
     markdown_path = Path(markdown_path)
@@ -112,6 +118,7 @@ def render_report_to_hwpx(
                 template_dir,
                 template_content.fields,
                 hwpx_path,
+                execution_context=execution_context,
             )
         except HwpxTemplateRenderError as exc:
             return problems, ExportResult(

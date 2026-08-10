@@ -41,8 +41,7 @@ import shutil
 import tempfile
 import zipfile
 from collections.abc import Mapping
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass, field, replace
 from html import unescape
 from pathlib import Path
 from typing import TypeAlias
@@ -55,6 +54,10 @@ from .hwpx_alias_map import FitConstraint, RepeatBlock
 from .hwpx_fss_director_report import (
     FSS_META_NAMES,
     FssPackageMetadata,
+)
+from ..templates.hwpx_layout_context import (
+    LayoutContractError,
+    verify_recorded_layout,
 )
 from .hwpx_table_fill_adapter import (
     HwpxTableCellFill,
@@ -83,10 +86,20 @@ _REPEAT_SEPARATOR_ELEMENT_RE = re.compile(
     r"</?hp:(?:p|run|t|linesegarray|lineseg)\b[^>]*>"
 )
 _SECTION_PART_RE = re.compile(r"^Contents/section\d+\.xml$", re.IGNORECASE)
+_PARAGRAPH_START_RE = re.compile(r"<hp:p\b")
 _LINESEGARRAY_RE = re.compile(
     r"<hp:linesegarray\b[^>]*/>|<hp:linesegarray\b[^>]*>.*?</hp:linesegarray>",
     re.DOTALL,
 )
+_XML_TAG_RE = re.compile(
+    r"<(?P<closing>/)?(?P<name>[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?)(?:\s+(?:[^\"'>]|\"[^\"]*\"|'[^']*')*)?\s*/?>",
+    re.DOTALL,
+)
+_LEADING_FWSPACE_TAG_RE = re.compile(
+    r"\s*<(?:[A-Za-z_][\w.-]*:)?fwSpace\b[^>]*/>"
+)
+_ROW_ADDRESS_RE = re.compile(r'\browAddr="(?P<row>\d+)"')
+_COL_ADDRESS_RE = re.compile(r'\bcolAddr="(?P<col>\d+)"')
 _HPF_PART = "Contents/content.hpf"
 _FSS_SECTION_PART = "Contents/section0.xml"
 _FSS_PREVIEW_TEXT_PART = "Preview/PrvText.txt"
@@ -109,8 +122,18 @@ ON_MISSING_MODES = ("keep", "sample", "unknown", "error")
 @dataclass(frozen=True, slots=True)
 class _PackageContent:
     sections: Mapping[str, str]
+    # None only on the candidate round-trip, where content.hpf is copied unchanged.
     fss_metadata: FssPackageMetadata | None
-    document_title: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class _XmlSpan:
+    name: str
+    start: int
+    open_end: int
+    content_end: int
+    end: int
+    parent: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -156,15 +179,20 @@ def fill_template_sections(
     template_dir = Path(template_dir)
     _validate_on_missing(on_missing)
     try:
-        resolved = resolve_hwpx_template_input(template_dir, content)
+        resolved = resolve_hwpx_template_input(
+            template_dir,
+            content,
+            resolve_metadata=False,
+        )
     except HwpxTemplateInputError as exc:
         raise HwpxTemplateRenderError(str(exc)) from exc
-    return _fill_resolved_template_sections(
+    filled_sections, result, _ = _fill_resolved_template_sections(
         template_dir,
         resolved.render_plan,
         resolved.unknown_keys,
         on_missing,
     )
+    return filled_sections, result
 
 
 def _fill_resolved_template_sections(
@@ -172,11 +200,13 @@ def _fill_resolved_template_sections(
     plan: ResolvedRenderPlan,
     unknown_keys: tuple[str, ...],
     on_missing: str,
-) -> tuple[dict[str, str], RenderResult]:
+) -> tuple[dict[str, str], RenderResult, dict[str, list[tuple[int, int, int]]]]:
+    """Fill one template's sections; also report which paragraph ranges were rebuilt."""
     filled: set[str] = set()
     missing: set[str] = set()
 
     filled_sections: dict[str, str] = {}
+    rewritten: dict[str, list[tuple[int, int, int]]] = {}
     template_files = sorted((template_dir / "template").glob("section*.template.xml"))
     if not template_files:
         raise HwpxTemplateRenderError(f"no template/section*.template.xml in {template_dir}")
@@ -189,14 +219,17 @@ def _fill_resolved_template_sections(
         match = _SECTION_TEMPLATE_RE.fullmatch(template_file.name)
         if match is None:
             continue
-        internal = f"Contents/section{int(match.group(1))}.xml"
+        section = f"section{int(match.group(1))}.xml"
+        internal = f"Contents/{section}"
         xml = template_file.read_text(encoding="utf-8")
-        filled_xml, repeat_filled = render_repeat_block(
+        filled_xml, repeat_filled, repeat_ranges = render_repeat_block(
             xml,
             plan.repeat_values,
             plan.repeat_blocks,
         )
         filled.update(repeat_filled)
+        if repeat_ranges:
+            rewritten[section] = repeat_ranges
         filled_xml = _fill_xml(
             filled_xml,
             plan.field_values,
@@ -234,7 +267,7 @@ def _fill_resolved_template_sections(
         leftover_placeholders=leftover,
         unknown_keys=list(unknown_keys),
     )
-    return filled_sections, result
+    return filled_sections, result, rewritten
 
 
 def _write_hwpx_package(
@@ -254,12 +287,11 @@ def _write_hwpx_package(
                 or _SECTION_PART_RE.fullmatch(info.filename)
             ):
                 data = _ensure_hwpunitchar_namespace(data)
-            if info.filename == _HPF_PART:
-                data = (
-                    _update_fss_content_hpf(data, package_content.fss_metadata)
-                    if package_content.fss_metadata is not None
-                    else _update_content_hpf(data, package_content.document_title)
-                )
+            if (
+                info.filename == _HPF_PART
+                and package_content.fss_metadata is not None
+            ):
+                data = _update_fss_content_hpf(data, package_content.fss_metadata)
             zout.writestr(info, data)
 
     unmatched = sorted(set(package_content.sections) - replaced)
@@ -272,6 +304,7 @@ def _write_hwpx_package(
 def _apply_table_fills(
     output_path: Path,
     table_fills: list[HwpxTableCellFill],
+    placeholder_map: Mapping[str, JsonValue],
 ) -> None:
     if not table_fills:
         return
@@ -291,6 +324,196 @@ def _apply_table_fills(
                 f"mapped table-cell rendering failed: {table_result.error}"
             )
         shutil.copyfile(table_output, output_path)
+    _restore_table_cell_leading_fwspaces(output_path, table_fills, placeholder_map)
+
+
+def _restore_table_cell_leading_fwspaces(
+    output_path: Path,
+    table_fills: list[HwpxTableCellFill],
+    placeholder_map: Mapping[str, JsonValue],
+) -> None:
+    filled_cells = {
+        (fill.section, fill.table, fill.row, fill.col) for fill in table_fills
+    }
+    targets: dict[str, dict[tuple[int, int, int], int]] = {}
+    fields = placeholder_map.get("fields", [])
+    if not isinstance(fields, list):
+        return
+    section_ordinals: Mapping[str, int] | None = None
+    for field in fields:
+        if not isinstance(field, dict) or field.get("replacement_mode") != "table_cell":
+            continue
+        context = field.get("layout_context")
+        if not isinstance(context, dict):
+            continue
+        expected = context.get("leading_fwspace_count")
+        if not isinstance(expected, int) or isinstance(expected, bool) or expected <= 0:
+            continue
+        section = field.get("section")
+        table = field.get("table")
+        row = field.get("row")
+        col = field.get("col")
+        if (
+            not isinstance(section, str)
+            or not isinstance(table, int)
+            or not isinstance(row, int)
+            or not isinstance(col, int)
+        ):
+            raise HwpxTemplateRenderError(
+                "table-cell leading_fwspace_count requires section and cell coordinates"
+            )
+        if "section_index" not in field and section_ordinals is None:
+            section_ordinals = _section_ordinals(output_path)
+        section_index = _table_cell_section_index(field, section_ordinals)
+        if not isinstance(section_index, int):
+            raise HwpxTemplateRenderError(
+                "table-cell leading_fwspace_count requires an integer section_index"
+            )
+        if (section_index, table, row, col) not in filled_cells:
+            continue
+        targets.setdefault(f"Contents/{section}", {})[(table, row, col)] = expected
+
+    if not targets:
+        return
+    with zipfile.ZipFile(output_path) as source:
+        entries = [(info, source.read(info.filename)) for info in source.infolist()]
+    entry_data = {info.filename: data for info, data in entries}
+    restored = {
+        section: _restore_leading_fwspaces_in_section(data.decode("utf-8"), cells).encode(
+            "utf-8"
+        )
+        for section, cells in targets.items()
+        for data in [entry_data[section]]
+    }
+    with tempfile.TemporaryDirectory(
+        prefix=".hwpx-template-table-indent-",
+        dir=output_path.parent,
+    ) as temp:
+        temporary_output = Path(temp) / output_path.name
+        with zipfile.ZipFile(temporary_output, "w") as destination:
+            for info, data in entries:
+                destination.writestr(info, restored.get(info.filename, data))
+        os.replace(temporary_output, output_path)
+
+
+def _restore_leading_fwspaces_in_section(
+    section: str,
+    targets: Mapping[tuple[int, int, int], int],
+) -> str:
+    spans = _xml_spans(section)
+    tables = [index for index, span in enumerate(spans) if span.name == "hp:tbl"]
+    insertions: list[tuple[int, str]] = []
+    for table_index, row, col in targets:
+        if table_index >= len(tables):
+            raise HwpxTemplateRenderError(
+                f"table-cell fwSpace restoration cannot find table {table_index}"
+            )
+        table_span = tables[table_index]
+        cell_span = _cell_span(spans, table_span, row, col, section)
+        text_span = _first_text_span_in_cell(spans, cell_span)
+        body = section[text_span.open_end : text_span.content_end]
+        position = 0
+        count = 0
+        while match := _LEADING_FWSPACE_TAG_RE.match(body, position):
+            position = match.end()
+            count += 1
+        missing = targets[(table_index, row, col)] - count
+        if missing > 0:
+            insertions.append(
+                (text_span.open_end + position, "<hp:fwSpace/>" * missing)
+            )
+    for position, value in sorted(insertions, reverse=True):
+        section = section[:position] + value + section[position:]
+    return section
+
+
+def _xml_spans(xml: str) -> list[_XmlSpan]:
+    spans: list[_XmlSpan] = []
+    stack: list[int] = []
+    for match in _XML_TAG_RE.finditer(xml):
+        name = match.group("name")
+        if match.group("closing"):
+            if not stack or spans[stack[-1]].name != name:
+                raise HwpxTemplateRenderError("malformed section XML during fwSpace restoration")
+            index = stack.pop()
+            spans[index] = replace(
+                spans[index],
+                content_end=match.start(),
+                end=match.end(),
+            )
+            continue
+        parent = stack[-1] if stack else None
+        span = _XmlSpan(
+            name=name,
+            start=match.start(),
+            open_end=match.end(),
+            content_end=match.end(),
+            end=match.end(),
+            parent=parent,
+        )
+        spans.append(span)
+        if not match.group(0).rstrip().endswith("/>"):
+            stack.append(len(spans) - 1)
+    if stack:
+        raise HwpxTemplateRenderError("unclosed section XML during fwSpace restoration")
+    return spans
+
+
+def _cell_span(
+    spans: list[_XmlSpan],
+    table_span: int,
+    row: int,
+    col: int,
+    section: str,
+) -> int:
+    for index, span in enumerate(spans):
+        if span.name != "hp:tc" or _nearest_ancestor(spans, index, "hp:tbl") != table_span:
+            continue
+        address = next(
+            (
+                child
+                for child, child_span in enumerate(spans)
+                if child_span.parent == index and child_span.name == "hp:cellAddr"
+            ),
+            None,
+        )
+        if address is None:
+            continue
+        opening = section[spans[address].start : spans[address].open_end]
+        row_match = _ROW_ADDRESS_RE.search(opening)
+        col_match = _COL_ADDRESS_RE.search(opening)
+        if (
+            row_match is not None
+            and col_match is not None
+            and int(row_match.group("row")) == row
+            and int(col_match.group("col")) == col
+        ):
+            return index
+    raise HwpxTemplateRenderError(
+        f"table-cell fwSpace restoration cannot find row {row}, col {col}"
+    )
+
+
+def _first_text_span_in_cell(spans: list[_XmlSpan], cell_span: int) -> _XmlSpan:
+    for index, span in enumerate(spans):
+        if span.name == "hp:t" and _nearest_ancestor(spans, index, "hp:tc") == cell_span:
+            return span
+    raise HwpxTemplateRenderError(
+        "table-cell fill removed the first hp:t needed for fwSpace restoration"
+    )
+
+
+def _nearest_ancestor(
+    spans: list[_XmlSpan],
+    index: int,
+    name: str,
+) -> int | None:
+    parent = spans[index].parent
+    while parent is not None:
+        if spans[parent].name == name:
+            return parent
+        parent = spans[parent].parent
+    return None
 
 
 def _refresh_fss_preview_text(output_path: Path) -> None:
@@ -359,15 +582,20 @@ def orchestrate_hwpx_render(
     on_missing: str = "keep",
     validate: bool = True,
 ) -> RenderResult:
-    """Fill the template and write a filled HWPX.
+    """Generate a final document from an approved template.
+
+    The template must declare a metadata contract in ``alias_map.json`` and an
+    ``execution_context`` must name the requester; without either this raises
+    rather than writing a document with partial metadata. To round-trip a
+    template that is still being built, use ``render_candidate_roundtrip``.
 
     The base package is ``base_hwpx`` if given, otherwise the self-contained
     ``<template_dir>/source.hwpx`` snapshot. ``Contents/section*.xml`` change,
-    ``Contents/content.hpf`` gets template-specific metadata updates, and the FSS
-    director report rebuilds ``Preview/PrvText.txt`` from its final section. Every
-    other entry is copied byte-for-byte except that a missing required
-    ``hwpunitchar`` root namespace is restored in header/section XML. A
-    self-contained template needs no external file.
+    ``Contents/content.hpf`` gets all nine declared metadata values, and
+    ``Preview/PrvText.txt`` is rebuilt from the final section. Every other entry
+    is copied byte-for-byte except that a missing required ``hwpunitchar`` root
+    namespace is restored in header/section XML. A self-contained template needs
+    no external file.
 
     ``validate`` (default True) runs strict HWPX package validation on the output
     and raises if it does not pass — a file that only opens in Hancom is not enough.
@@ -419,11 +647,57 @@ def render_prepared_hwpx_template(
         )
     base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
     _validate_render_paths(template_dir, base, output_path)
-    return _render_prepared_hwpx_template(
+    return _render_filled_package(
         template_dir,
-        content,
+        content.placeholder_map,
+        content.render_plan,
+        content.unknown_keys,
         output_path,
         base,
+        package_metadata=content.package_metadata,
+        on_missing=on_missing,
+        validate=validate,
+    )
+
+
+def render_candidate_roundtrip(
+    template_dir: Path | str,
+    content: Mapping[str, JsonValue],
+    output_path: Path | str,
+    *,
+    base_hwpx: Path | str | None = None,
+    on_missing: str = "keep",
+    validate: bool = True,
+) -> RenderResult:
+    """Round-trip a template that is still being built: structure and format only.
+
+    This is the check run while extracting and QA-ing a template, before anyone
+    has written its ``alias_map.json``. No document metadata exists yet, so
+    ``Contents/content.hpf`` and ``Preview/PrvText.txt`` are copied unchanged and
+    the output is a structural round-trip, not a finished document. Generating a
+    final document from an approved template goes through
+    ``orchestrate_hwpx_render``, which requires the metadata contract.
+    """
+    template_dir = Path(template_dir)
+    output_path = Path(output_path)
+    try:
+        resolved = resolve_hwpx_template_input(
+            template_dir,
+            content,
+            resolve_metadata=False,
+        )
+    except HwpxTemplateInputError as exc:
+        raise HwpxTemplateRenderError(str(exc)) from exc
+    base = Path(base_hwpx) if base_hwpx is not None else template_dir / "source.hwpx"
+    _validate_render_paths(template_dir, base, output_path)
+    return _render_filled_package(
+        template_dir,
+        resolved.placeholder_map,
+        resolved.render_plan,
+        resolved.unknown_keys,
+        output_path,
+        base,
+        package_metadata=None,
         on_missing=on_missing,
         validate=validate,
     )
@@ -447,39 +721,33 @@ def _validate_render_paths(
         )
 
 
-def _render_prepared_hwpx_template(
+def _render_filled_package(
     template_dir: Path,
-    content: PreparedRenderContent,
+    placeholder_map: Mapping[str, JsonValue],
+    render_plan: ResolvedRenderPlan,
+    unknown_keys: tuple[str, ...],
     output_path: Path,
     base: Path,
     *,
+    package_metadata: FssPackageMetadata | None,
     on_missing: str,
     validate: bool,
 ) -> RenderResult:
     _validate_on_missing(on_missing)
-    document_title = (
-        content.render_plan.field_values.get(
-            content.render_plan.title_field_id
-        )
-        if content.render_plan.title_field_id
-        else None
-    )
-    if not isinstance(document_title, str) or not document_title:
-        document_title = None
     table_fills, table_filled, table_missing = _table_cell_fills(
         template_dir,
-        content.placeholder_map,
-        content.render_plan.field_values,
+        placeholder_map,
+        render_plan.field_values,
         on_missing=on_missing,
     )
     if on_missing == "error" and table_missing:
         raise HwpxTemplateRenderError(
             f"missing content for fields: {sorted(table_missing)}"
         )
-    filled_sections, result = _fill_resolved_template_sections(
+    filled_sections, result, rewritten = _fill_resolved_template_sections(
         template_dir,
-        content.render_plan,
-        content.unknown_keys,
+        render_plan,
+        unknown_keys,
         on_missing,
     )
     result.filled_fields = sorted(set(result.filled_fields) | table_filled)
@@ -491,18 +759,37 @@ def _render_prepared_hwpx_template(
         output_path,
         _PackageContent(
             sections=filled_sections,
-            fss_metadata=content.package_metadata,
-            document_title=document_title,
+            fss_metadata=package_metadata,
         ),
     )
-    _apply_table_fills(output_path, table_fills)
-    if content.package_metadata is not None:
+    _apply_table_fills(output_path, table_fills, placeholder_map)
+    _validate_rendered_layout(output_path, placeholder_map, rewritten)
+    if package_metadata is not None:
         _refresh_fss_preview_text(output_path)
     if validate:
         validate_hwpx_output(output_path)
     result.output = output_path
-    result.title_updated = document_title is not None
+    result.title_updated = package_metadata is not None
     return result
+
+
+def _validate_rendered_layout(
+    output_path: Path,
+    placeholder_map: Mapping[str, JsonValue],
+    rewritten: Mapping[str, list[tuple[int, int, int]]],
+) -> None:
+    """Check the rendered document still gives every placeholder its recorded layout."""
+    with zipfile.ZipFile(output_path) as package:
+        try:
+            verify_recorded_layout(
+                placeholder_map,
+                lambda section: package.read(f"Contents/{section}"),
+                package.read("Contents/header.xml"),
+                where="the rendered document",
+                rewritten=rewritten,
+            )
+        except LayoutContractError as exc:
+            raise HwpxTemplateRenderError(str(exc)) from exc
 
 
 def validate_hwpx_output(output_path: Path | str) -> None:
@@ -586,27 +873,6 @@ def _set_hpf_meta(xml: str, name: str, value: str) -> str:
             f"content.hpf has no <opf:meta name={name!r}> element to update"
         )
     return filled
-
-
-def _update_content_hpf(data: bytes, title: str | None) -> bytes:
-    """Refresh the created/modified stamps; change the title only when given.
-
-    Written by string substitution rather than an XML round trip so the rest of
-    ``content.hpf`` (manifest, spine, untouched metadata) keeps its exact bytes.
-    """
-    xml = data.decode("utf-8")
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    if title is not None:
-        xml, count = _HPF_TITLE_RE.subn(
-            lambda _match: f"<opf:title>{escape(title)}</opf:title>", xml, count=1
-        )
-        if count != 1:
-            raise HwpxTemplateRenderError(
-                "content.hpf has no <opf:title> element to update"
-            )
-    xml = _set_hpf_meta(xml, "CreatedDate", stamp)
-    xml = _set_hpf_meta(xml, "ModifiedDate", stamp)
-    return xml.encode("utf-8")
 
 
 def _replace_single_fss_meta(xml: str, name: str, value: str) -> str:
@@ -696,6 +962,7 @@ def _table_cell_fills(
     if missing and on_missing in ("unknown", "sample"):
         fallback = _missing_fallback(template_dir, missing, on_missing)
 
+    section_ordinals: Mapping[str, int] | None = None
     fills = []
     for entry in entries:
         field_id = entry["field_id"]
@@ -704,9 +971,11 @@ def _table_cell_fills(
             value = fallback.get(field_id)
             if value is None:
                 continue
+        if "section_index" not in entry and section_ordinals is None:
+            section_ordinals = _section_ordinals(template_dir / "source.hwpx")
         fills.append(
             HwpxTableCellFill(
-                section=int(entry.get("section_index", _section_index(entry["section"]))),
+                section=_table_cell_section_index(entry, section_ordinals),
                 table=int(entry["table"]),
                 row=int(entry["row"]),
                 col=int(entry["col"]),
@@ -716,10 +985,46 @@ def _table_cell_fills(
     return fills, filled, missing
 
 
-def _section_index(section: str) -> int:
-    match = re.search(r"section(\d+)", section, re.IGNORECASE)
+def _table_cell_section_index(
+    field: Mapping[str, JsonValue],
+    section_ordinals: Mapping[str, int] | None,
+) -> int:
+    if "section_index" in field:
+        return int(field["section_index"])
+    section = field.get("section")
+    if not isinstance(section, str):
+        raise HwpxTemplateRenderError(
+            "table-cell field requires a section or section_index"
+        )
+    if section_ordinals is None:
+        raise HwpxTemplateRenderError(
+            "table-cell field without section_index requires source HWPX sections"
+        )
+    try:
+        return section_ordinals[f"Contents/{section}"]
+    except KeyError as exc:
+        raise HwpxTemplateRenderError(
+            f"table-cell field references a section missing from HWPX: {section}"
+        ) from exc
+
+
+def _section_ordinals(package_path: Path) -> dict[str, int]:
+    with zipfile.ZipFile(package_path) as package:
+        sections = sorted(
+            (
+                name
+                for name in package.namelist()
+                if _SECTION_PART_RE.fullmatch(name)
+            ),
+            key=_section_part_number,
+        )
+    return {section: index for index, section in enumerate(sections)}
+
+
+def _section_part_number(path: str) -> int:
+    match = re.search(r"section(\d+)\.xml$", path, re.IGNORECASE)
     if match is None:
-        raise HwpxTemplateRenderError(f"cannot resolve section index from {section!r}")
+        raise HwpxTemplateRenderError(f"cannot resolve section number from {path!r}")
     return int(match.group(1))
 
 
@@ -864,8 +1169,15 @@ def render_repeat_block(
     xml: str,
     content: Mapping[str, JsonValue],
     blocks: Mapping[str, RepeatBlock],
-) -> tuple[str, set[str]]:
+) -> tuple[str, set[str], list[tuple[int, int, int]]]:
+    """Expand each repeat block. Also reports the paragraph ranges it rebuilt.
+
+    Each range is ``(source paragraph index, source paragraph count, rendered
+    paragraph count)`` in the *template's* paragraph numbering, so the layout
+    contract can follow anchors across an expansion.
+    """
     filled: set[str] = set()
+    rewritten: list[tuple[int, int, int]] = []
     for name, block in blocks.items():
         items = content.get(block.anchor)
         if not isinstance(items, list):
@@ -874,10 +1186,28 @@ def render_repeat_block(
         source = _load_repeat_source(xml, name, block)
         rendered, block_filled = _render_repeat_items(items, block, source)
         start, end = _repeat_replacement_span(xml, name, source)
+        current_start = _paragraph_count_in(xml[:start])
+        # 앞서 확장한 블록이 이미 문단을 늘렸다면 그만큼 빼야 원본 좌표가 된다.
+        source_start = current_start - sum(
+            rendered_count - source_count
+            for previous_start, source_count, rendered_count in rewritten
+            if previous_start < current_start
+        )
+        rewritten.append(
+            (
+                source_start,
+                _paragraph_count_in(xml[start:end]),
+                _paragraph_count_in(rendered),
+            )
+        )
         xml = xml[:start] + rendered + xml[end:]
         filled.update(block_filled)
 
-    return xml, filled
+    return xml, filled, sorted(rewritten)
+
+
+def _paragraph_count_in(xml: str) -> int:
+    return len(_PARAGRAPH_START_RE.findall(xml))
 
 
 def _validate_fit_constraints(

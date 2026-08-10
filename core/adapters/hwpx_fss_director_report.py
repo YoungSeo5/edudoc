@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .hwpx_template_input import ResolvedMetadata
 
-FSS_TEMPLATE_ID = "fss_director_report"
 FSS_META_NAMES = (
     "creator",
     "subject",

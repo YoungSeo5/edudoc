@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 from core.adapters.hwpx_template_renderer import (  # noqa: E402
     HwpxTemplateRenderError,
     load_template_content,
-    orchestrate_hwpx_render,
+    render_candidate_roundtrip,
 )
 from core.templates.hwpx_content_separator import (  # noqa: E402
     separate_hwpx_template_content,
@@ -67,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         # 이미 등록된 템플릿이 있으면, alias_map이 묶어 둔 field_id가 후보에서
         # 같은 내용을 가리키는지 먼저 확인한다. field_id는 순번이라 앞쪽 분류가
         # 하나만 달라져도 뒤 번호가 조용히 다른 텍스트로 밀린다.
-        field_identity = TemplateRegistry().verify_candidate_field_identity(
+        field_identity = TemplateRegistry(
+            ROOT / "templates" / "institutions"
+        ).verify_candidate_field_identity(
             args.institution,
             args.document_type,
             args.output_dir,
@@ -75,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
 
         sample_content = load_template_content(separation.content_sample)
         sample_output = args.output_dir / "roundtrip.sample.hwpx"
-        sample_render = orchestrate_hwpx_render(
+        sample_render = render_candidate_roundtrip(
             args.output_dir,
             sample_content.fields,
             sample_output,
@@ -100,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         test_output = args.output_dir / "roundtrip.test.hwpx"
-        test_render = orchestrate_hwpx_render(
+        test_render = render_candidate_roundtrip(
             args.output_dir,
             test_fields,
             test_output,

@@ -1,0 +1,68 @@
+{
+  "template_id": "fss_one_page",
+  "title_field": "제목",
+  "metadata": {
+    "title": {"field": "제목"},
+    "report_date": {"context": "requested_at"},
+    "description": {"field": "개요 핵심"},
+    "subject": {"field": "현황 제목", "separator": ", "},
+    "keywords": {
+      "separator": ", ",
+      "sources": [
+        {"field": "제목"},
+        {"field": "현황 제목"}
+      ]
+    }
+  },
+  "fields": {
+    "제목": "content_01",
+    "작성정보": "content_02",
+    "현황 제목": "content_04",
+    "개요 핵심": "content_07",
+    "개요 본문": "content_08",
+    "개요 세부": "body_bullet_01",
+    "개요 출처": "content_09",
+    "진행상황 핵심": "content_12",
+    "진행상황 본문": "content_13",
+    "진행상황 세부": "body_bullet_02",
+    "진행상황 출처": "content_14",
+    "통계 주석": "stat_note_01",
+    "상세 주석": "detail_note_01",
+    "현황 표제": "document_title_01",
+    "현황 안내": "content_15",
+    "현황 내용": "body_bullet_03",
+    "현황 주석": "stat_note_02",
+    "대응 1 핵심": "content_18",
+    "대응 1 본문": "content_19",
+    "대응 1 세부": "body_bullet_04",
+    "대응 1 출처": "content_20",
+    "대응 2 핵심": "content_22",
+    "대응 2 본문": "content_23",
+    "대응 2 세부": "body_bullet_05",
+    "대응 2 출처": "content_24",
+    "결론": "conclusion_01",
+    "참고": "content_26"
+  },
+  "text_rules": {
+    "작성정보": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "개요 핵심": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "개요 세부": {"single_paragraph": true, "prefix": "◦ "},
+    "개요 출처": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "진행상황 핵심": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "진행상황 세부": {"single_paragraph": true, "prefix": "◦ "},
+    "진행상황 출처": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "통계 주석": {"single_paragraph": true, "prefix": "* "},
+    "상세 주석": {"single_paragraph": true, "prefix": "† "},
+    "현황 표제": {"single_paragraph": true, "prefix": "〈", "suffix": "〉"},
+    "현황 안내": {"single_paragraph": true, "prefix": "※ "},
+    "현황 내용": {"single_paragraph": true, "prefix": "◦ "},
+    "현황 주석": {"single_paragraph": true, "prefix": "* "},
+    "대응 1 핵심": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "대응 1 세부": {"single_paragraph": true, "prefix": "◦ "},
+    "대응 1 출처": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "대응 2 핵심": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "대응 2 세부": {"single_paragraph": true, "prefix": "◦ "},
+    "대응 2 출처": {"single_paragraph": true, "prefix": "(", "suffix": ")"},
+    "결론": {"single_paragraph": true, "prefix": "⇨ "}
+  }
+}

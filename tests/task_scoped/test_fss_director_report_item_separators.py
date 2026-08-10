@@ -5,6 +5,7 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from xml.etree import ElementTree
 
 import hwpx
 import pytest
@@ -149,9 +150,9 @@ def test_fss_report_inserts_each_preceding_level_separator(
     transitions = (
         ("1. 제목", "□ 첫 번째 본문", ("22", "14")),
         ("□ 첫 번째 본문", "□ 두 번째 본문", ("23", "16")),
-        ("□ 두 번째 본문", " ◦ 세부 내용", ("23", "16")),
-        (" ◦ 세부 내용", "      * 통계 주석", ("24", "17")),
-        ("      * 통계 주석", "         † 상세 주석", ("25", "19")),
+        ("□ 두 번째 본문", "◦ 세부 내용", ("23", "16")),
+        ("◦ 세부 내용", "* 통계 주석", ("24", "17")),
+        ("* 통계 주석", "† 상세 주석", ("25", "19")),
     )
     for current, following, expected_style in transitions:
         current_index = _paragraph_index(paragraphs, current)
@@ -170,12 +171,55 @@ def test_fss_report_inserts_each_preceding_level_separator(
     assert list(validation.errors) == []
 
 
+def test_fss_report_uses_paragraph_styles_as_only_repeat_indentation(
+    tmp_path: Path,
+) -> None:
+    # Given: the real report renders each nested marker level.
+    content = json.loads(CONTENT_PATH.read_text(encoding="utf-8"))
+    content["본문"] = [
+        [0, "제목"],
+        [1, "본문"],
+        [2, "하위 항목"],
+        [3, "통계 주석"],
+        [4, "상세 주석"],
+    ]
+    output = tmp_path / "금감원_원장보고_문단서식_들여쓰기.hwpx"
+
+    # When: the approved rendering path creates the final HWPX.
+    orchestrate_hwpx_render(
+        TEMPLATE_DIR,
+        content,
+        output,
+        execution_context=EXECUTION_CONTEXT,
+    )
+
+    # Then: marker text has no leading spaces and its original paragraph style remains.
+    with zipfile.ZipFile(output) as package:
+        section = ElementTree.fromstring(package.read("Contents/section0.xml"))
+    expected = {
+        "◦ 하위 항목": "24",
+        "* 통계 주석": "25",
+        "† 상세 주석": "26",
+    }
+    paragraphs = [
+        paragraph
+        for paragraph in section.iter()
+        if paragraph.tag.rsplit("}", 1)[-1] == "p"
+    ]
+    for expected_text, expected_style in expected.items():
+        paragraph = next(
+            item for item in paragraphs if expected_text in "".join(item.itertext())
+        )
+        assert "".join(paragraph.itertext()) == expected_text
+        assert paragraph.attrib["paraPrIDRef"] == expected_style
+
+
 def test_repeat_block_omits_separator_after_last_item() -> None:
     # Given: the last item has no following item to separate.
     content = {"content_01": [[4, "마지막 상세"]]}
 
     # When: the block is rendered.
-    rendered, _ = render_repeat_block(
+    rendered, _, _ = render_repeat_block(
         _repeat_xml(),
         content,
         _repeat_alias_map().blocks,
@@ -193,7 +237,7 @@ def test_repeat_block_inserts_one_configured_section_transition() -> None:
     alias_map = _repeat_alias_map(section_transition=(0, 0))
 
     # When: the configured transition is rendered.
-    rendered, _ = render_repeat_block(
+    rendered, _, _ = render_repeat_block(
         _repeat_xml(),
         content,
         alias_map.blocks,
