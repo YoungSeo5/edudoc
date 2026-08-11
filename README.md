@@ -42,9 +42,17 @@ errors or exit codes. See [exports/README.md](exports/README.md).
 
 ## Quick checks
 
-Python is pinned to 3.13 by [.python-version](.python-version). Install the test
-dependencies into `.venv` with `pip install -r requirements-dev.txt`
-(`requirements.txt` plus `pytest>=8,<9`) before running these.
+The project uses uv. `uv venv` reads [.python-version](.python-version) and creates
+`.venv` with CPython 3.13; nothing else in the repository enforces that version. On a
+fresh clone, create the environment and install the test dependencies
+(`requirements.txt` plus `pytest>=8,<9`) first:
+
+```powershell
+uv venv
+uv pip install -r requirements-dev.txt
+```
+
+Then:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/ -q
