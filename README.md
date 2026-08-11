@@ -43,7 +43,7 @@ errors or exit codes. See [exports/README.md](exports/README.md).
 ## Quick checks
 
 ```powershell
-python -m pytest tests/ -q
+.\.venv\Scripts\python.exe -m pytest tests/ -q
 python scripts/harness/check_dependency_policy.py
 python scripts/harness/check_hwp_priority_drift.py
 ```

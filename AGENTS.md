@@ -13,6 +13,11 @@ edudoc is a reference-based document generation system, not a file-format conver
 - Do not infer document policy, template identity, or Gongmun rules from a file format.
 - Do not apply Gongmun rules outside `scripts/gongmun/generate_from_brief.py` or an explicit compose `profile_family="gongmun"`.
 - Do not silently fall back to another renderer, exporter, template, profile, or generic `md2hwpx` route.
+- Treat every path, renderer, exporter, template, profile, execution route, or exact command explicitly fixed by the user or project policy as a hard constraint.
+- If a fixed route fails, stop and report the exact failure. Do not retry through or substitute another path, temporary directory, renderer, exporter, template, profile, command, or execution environment without explicit user approval.
+- Never create pytest `--basetemp`, QA outputs, staging directories, extracted files, or temporary artifacts at the repository root.
+- Pytest temporary files and QA staging artifacts must use `sandbox/`. If that location is missing, inaccessible, or unwritable, stop and report the blocker. Do not create a fallback directory.
+- A result produced through an unapproved alternate route is not valid implementation or validation evidence.
 - Do not modify protected skills under `skills/hwp/`, `skills/hwp-skill/`, `skills/rhwp-edit/`, `skills/rhwp-advanced/`, or `skills/skills-main/`.
 - Do not auto-install, auto-clone, change global state, call paid LLM APIs, commit, push, or delete files without explicit approval.
 - Scope changes to the request and preserve user working-tree changes.
@@ -46,7 +51,7 @@ python scripts/gongmun/generate_from_brief.py <brief.md> --out exports/gongmun
 python scripts/public_plan/generate_from_samples.py <samples-dir>
 python scripts/compose/render_plan.py --plan <plan.json> --to docx,pptx,hwpx
 python scripts/templates/qa_hwpx_template.py --source <source.hwpx> --output-dir <new-candidate-dir> --institution <institution> --document-type <document-type> [--template-id <template-id>]
-python -m pytest tests/ -q
+.\.venv\Scripts\python.exe -m pytest tests/ -q
 python scripts/harness/check_dependency_policy.py
 python scripts/harness/check_hwp_priority_drift.py
 ```
