@@ -45,19 +45,26 @@ errors or exit codes. See [exports/README.md](exports/README.md).
 The project uses uv. `uv venv` reads [.python-version](.python-version) and creates
 `.venv` with CPython 3.13; nothing else in the repository enforces that version. On a
 fresh clone, create the environment and install the test dependencies
-(`requirements.txt` plus `pytest>=8,<9`) first:
+(`requirements.txt` plus `pytest>=8,<9`) first.
+
+Windows PowerShell:
 
 ```powershell
 uv venv
 uv pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest tests/ -q
+.\.venv\Scripts\python.exe scripts/harness/check_dependency_policy.py
+.\.venv\Scripts\python.exe scripts/harness/check_hwp_priority_drift.py
 ```
 
-Then:
+macOS/Linux Bash:
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest tests/ -q
-python scripts/harness/check_dependency_policy.py
-python scripts/harness/check_hwp_priority_drift.py
+```bash
+uv venv
+uv pip install -r requirements-dev.txt
+./.venv/bin/python -m pytest tests/ -q
+./.venv/bin/python scripts/harness/check_dependency_policy.py
+./.venv/bin/python scripts/harness/check_hwp_priority_drift.py
 ```
 
 Read [AGENTS.md](AGENTS.md) before changing code or documentation. `MEMORY.md` is an archived decision record, not a source of current instructions.
