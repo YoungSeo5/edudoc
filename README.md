@@ -68,3 +68,42 @@ uv pip install -r requirements-dev.txt
 ```
 
 Read [AGENTS.md](AGENTS.md) before changing code or documentation. `MEMORY.md` is an archived decision record, not a source of current instructions.
+
+## Acknowledgements
+
+### Reference material
+
+- **범정부오피스 (KISA버전)** — used as a public reference for exercising the HWPX
+  template extraction and QA path. Post: `[공문서 편집 자동화 프로그램] 범정부오피스(KISA버전)
+  다운로드`, published by 행정안전부 on 2026-08-04 on the 소통 서비스 board
+  (`sotong.go.kr`, `board_id=240`, `menu_id=606`); attachments `범피스1100가이드북.pdf`
+  and `KISA 범피스 1310.zip`. The page states no license or terms of use, so none is
+  claimed here.
+
+### Skills
+
+- **[hwpx-skill](https://github.com/jkf87/hwpx-skill)** by jkf87 — upstream of the
+  `skills/hwp-skill` submodule, which this project vendors as
+  [edudoc_hwp_skill](https://github.com/YoungSeo5/edudoc_hwp_skill) and calls through
+  adapters in `core/adapters/`. Its template-filling scripts informed how edudoc
+  approaches template generation. The submodule's own `README.md` carries its further
+  credits.
+
+### HWP → HWPX conversion
+
+Two distinct paths, credited separately.
+
+- **[hwp2hwpx-python-refactor](https://github.com/jkf87/hwp2hwpx-python-refactor)** —
+  performs the actual HWP → HWPX conversion. `skills/hwp-skill/scripts/convert_hwp.py`
+  imports `hwp2hwpx` from it, cloning the repository on demand; it is neither vendored
+  here nor listed in `requirements.txt`. `core/adapters/hwpx_skill_adapter.py` drives
+  that script.
+- **[pyhwp](https://pypi.org/project/pyhwp/)** (imported as `hwp5`) with **markdownify**
+  — a separate fallback in `core/hwp_converter.py` that goes HWP → HTML → Markdown. It
+  does not produce HWPX.
+
+### Runtime dependencies
+
+`python-hwpx`, `lxml`, `fonttools`, `pyhwp`, `markdownify`, `markdown-it-py`,
+`python-docx`, `python-pptx`, `reportlab`, `watchdog`. See
+[requirements.txt](requirements.txt) for what each one is used for.
