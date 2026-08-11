@@ -100,6 +100,7 @@ class DocumentLayout:
     """한 section과 그 header가 placeholder 위치에서 드러내는 레이아웃 사실."""
 
     paragraph_styles: tuple[str | None, ...]
+    fwspace_counts: tuple[tuple[int, int], ...]
     cell_margins: Mapping[tuple[int, int, int], dict[str, str] | None]
     style_margins: Mapping[str, list[dict[str, dict[str, str]]]]
 
@@ -114,11 +115,21 @@ class DocumentLayout:
         """
         index = paragraph_anchor(field)
         context = {"para_pr_id_ref": self.paragraph_styles[index]}
+        # fwSpace는 문단이 아니라 text node 단위다.
+        leading, trailing = self.fwspace_counts[field["text_node_index"]]
+        if leading:
+            context["leading_fwspace_count"] = leading
+        if trailing:
+            context["trailing_fwspace_count"] = trailing
         cell = _cell_anchor(field)
         if cell is not None:
             context["cell_margin"] = self.cell_margins[cell]
         return context
 ```
+
+`fwspace_counts` 는 `_nodes(section, "t")` 순서로 읽으므로 `text_node_index` 는 **섹션 전역
+`hp:t` 순번**이다. 셀 안에서 몇 번째인지가 아니다. 실제 구현은 `text_node_index` 가 int가
+아니거나 범위를 벗어나면 이 아스펙트를 붙이지 않는다.
 
 `tab`, `container` 등을 추가할 때 손대는 곳은 `read` 와 `context_for` 뿐이다.
 스타일처럼 여러 placeholder가 공유하는 정의는 `margins_of_referenced_styles` 와 같은 방식으로
@@ -163,6 +174,35 @@ def verify_recorded_layout(
 - 한 섹션에 반복 블록이 둘 이상이면 뒤 블록의 구간 시작이 이미 확장된 좌표계에서 세어지므로,
   앞 블록이 늘린 문단 수를 빼서 원본 좌표로 되돌린다 (`render_repeat_block`).
   현재 저장소에는 블록이 둘인 템플릿이 없어 이 경로는 테스트로 덮이지 않았다.
+
+### 표 셀 fwSpace — 검증이 아니라 복원
+
+다른 모든 아스펙트는 "재추출해서 다르면 실패"로 끝난다. 표 셀 안의 fwSpace만 예외로,
+검증 **전에** 능동 복원 단계가 하나 더 있다.
+
+이유는 `_apply_table_fills` 가 부르는 `skills/hwp-skill` 이 셀을 채울 때 출력 HWPX를
+통째로 다시 쓰기 때문이다. 스킬은 보호 대상이라 내부를 고칠 수 없고, 그 결과 채운 셀의
+leading `<hp:fwSpace/>` 와 같은 셀에 얹혀 있던 다른 field의 `hp:t` 내용이 함께 사라진다.
+`verify_recorded_layout` 은 이것을 실패로 잡아낼 뿐 되돌리지 못한다.
+
+`core/adapters/hwpx_template_renderer.py` 의 `_restore_table_cell_leading_fwspaces` 가
+그 사이를 메운다.
+
+- **기준본은 렌더 결과가 아니라 원본이다.** 스킬 호출 전 패키지를 `reference_path` 로
+  넘기고, `shutil.copyfile` 로 스킬 출력을 확정하기 **전에** 복원한다. 순서가 뒤집히면
+  기준본과 대상이 같은 파일이 되어 모든 비교가 조용히 통과한다.
+- **키는 `(table, row, col, text_node_index)`.** 한 셀에 `hp:t` 가 여럿일 수 있어
+  셀 좌표만으로는 어느 노드를 복원할지 정해지지 않는다. 여기까지 도달한 field에
+  `text_node_index` 가 없으면 `HwpxTemplateRenderError` 다.
+- **`replacement_mode` 에 따라 복원 방식이 갈린다.** `table_cell` 인 field는 부족한
+  `<hp:fwSpace/>` 개수만 채운다. 그렇지 않은 field는 스킬이 텍스트까지 지웠을 수 있으므로
+  원본의 해당 `hp:t` 본문 전체를 되돌린다.
+- 좌표 타입이 어긋난 field는 예외 없이 건너뛴다. 표 복원 대상이 아니라는 뜻이며,
+  실제 불일치는 뒤이어 도는 `verify_recorded_layout` 이 잡는다.
+
+테스트는 `tests/task_scoped/test_fss_one_page_final_rendering.py` 의
+`test_one_page_restores_each_field_fwspace_in_a_filled_table_cell` — 한 셀 안의 여러
+field가 각자 기록한 `leading_fwspace_count` 를 유지하는지 본다.
 
 ## 6. 변경 지점 (구현 완료)
 

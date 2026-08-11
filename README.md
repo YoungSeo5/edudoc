@@ -42,6 +42,10 @@ errors or exit codes. See [exports/README.md](exports/README.md).
 
 ## Quick checks
 
+Python is pinned to 3.13 by [.python-version](.python-version). Install the test
+dependencies into `.venv` with `pip install -r requirements-dev.txt`
+(`requirements.txt` plus `pytest>=8,<9`) before running these.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/ -q
 python scripts/harness/check_dependency_policy.py
